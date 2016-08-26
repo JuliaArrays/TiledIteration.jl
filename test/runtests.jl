@@ -19,4 +19,45 @@ using Base.Test
     end
 end
 
+@testset "threads" begin
+    function sumtiles(A, sz)
+        indsA = indices(A)
+        iter = TileIterator(indsA, sz)
+        sums = zeros(eltype(A), length(iter))
+        for (i,tileinds) in enumerate(iter)
+            v = view(A, tileinds...)
+            if sums[i] == 0
+                sums[i] = sum(v)
+            else
+                sums[i] = -sum(v)
+            end
+        end
+        sums
+    end
+    function sumtiles_threaded(A, sz)
+        indsA = indices(A)
+        iter = TileIterator(indsA, sz)
+        allinds = collect(iter)
+        sums = zeros(eltype(A), length(iter))
+        Threads.@threads for i = 1:length(allinds)
+            tileinds = allinds[i]
+            v = view(A, tileinds...)
+            if sums[i] == 0
+                sums[i] = sum(v)
+            else
+                sums[i] = -sum(v)
+            end
+        end
+        sums
+    end
+
+    A = rand(1000,1000)
+    snt = sumtiles(A, (100, 100))
+    st = sumtiles_threaded(A, (100, 100))
+    @test snt == st
+    @test all(st .> 0)
+    @time sumtiles(A, (100, 100))
+    @time sumtiles_threaded(A, (100, 100))
+end
+
 nothing
