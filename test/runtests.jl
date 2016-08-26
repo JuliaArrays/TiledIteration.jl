@@ -51,13 +51,14 @@ end
         sums
     end
 
-    A = rand(1000,1000)
-    snt = sumtiles(A, (100, 100))
-    st = sumtiles_threaded(A, (100, 100))
+    Asz, tilesz = Base.JLOptions().can_inline == 1 ? ((1000,1000), (100,100)) : ((100,100), (10,10))
+    A = rand(Asz)
+    snt = sumtiles(A, tilesz)
+    st = sumtiles_threaded(A, tilesz)
     @test snt == st
     @test all(st .> 0)
-    @time sumtiles(A, (100, 100))
-    @time sumtiles_threaded(A, (100, 100))
+    @time sumtiles(A, tilesz)
+    @time sumtiles_threaded(A, tilesz)
 end
 
 nothing
