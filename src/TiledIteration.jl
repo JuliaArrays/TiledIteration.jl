@@ -1,3 +1,5 @@
+__precompile__()
+
 module TiledIteration
 
 using OffsetArrays
@@ -41,6 +43,8 @@ end
 ceildiv(l, s) = ceil(Int, l/s)
 
 Base.length(iter::TileIterator) = length(iter.R)
+Base.eltype{N}(iter::TileIterator{N}) = NTuple{N,UnitRange{Int}}
+
 @inline Base.start(iter::TileIterator) = start(iter.R)
 @inline function Base.next(iter::TileIterator, state)
     I, newstate = next(iter.R, state)
