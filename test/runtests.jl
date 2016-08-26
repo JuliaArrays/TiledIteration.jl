@@ -19,6 +19,20 @@ using Base.Test
     end
 end
 
+@testset "padded sizes" begin
+    @test @inferred(padded_tilesize(UInt8, (1,))) == (2^14,)
+    @test @inferred(padded_tilesize(UInt16, (1,))) == (2^13,)
+    @test @inferred(padded_tilesize(Float64, (1,))) == (2^11,)
+    @test @inferred(padded_tilesize(Float64, (1,1))) == (2^11, 1)
+    @test @inferred(padded_tilesize(Float64, (2,1))) == (2^11, 1)
+    shp = @inferred(padded_tilesize(Float64, (2,2)))
+    @test all(x->x>2, shp)
+    @test 2^13 <= prod(shp)*8 <= 2^14
+    shp = @inferred(padded_tilesize(Float64, (3,3,3)))
+    @test all(x->x>3, shp)
+    @test 2^13 <= prod(shp)*8 <= 2^14
+end
+
 @testset "threads" begin
     function sumtiles(A, sz)
         indsA = indices(A)
@@ -57,8 +71,6 @@ end
     st = sumtiles_threaded(A, tilesz)
     @test snt == st
     @test all(st .> 0)
-    @time sumtiles(A, tilesz)
-    @time sumtiles_threaded(A, tilesz)
 end
 
 nothing
