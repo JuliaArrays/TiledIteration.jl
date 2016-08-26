@@ -13,16 +13,16 @@ const cachelinesize = 64
 # prod(s)/prod(s+sz); this ratio is maximized if s is proportional to
 # sz.
 function padded_tilesize{T}(::Type{T}, sz::Dims)
-    nd = length(sz)
+    nd = max(1, sum(x->x>1, sz))
     # isbits(T) || return map(zero, sz)
-    # don't be minimalist on the cache-friendly dim (use at least 4 cachelines)
-    dim1minlen = 4*cachelinesize÷sizeof(T)
+    # don't be too minimalist on the cache-friendly dim (use at least 2 cachelines)
+    dim1minlen = 2*cachelinesize÷sizeof(T)
     psz = (max(sz[1], dim1minlen), tail(sz)...)
     L = sizeof(T)*prod(psz)
     # try to stay in L1 cache, but in the end we want a reasonably
     # favorable work ratio. f is the constant of proportionality in s+sz ∝ sz
     f = max(floor(Int, (L1cachesize/(2*L))^(1/nd)), 2)
-    _padded_tilesize_scale(f, psz)
+    return _padded_tilesize_scale(f, psz)
 end
 
 @noinline _padded_tilesize_scale(f, psz) = map(x->x <= 1 ? x : f*x, psz) # see #15276
