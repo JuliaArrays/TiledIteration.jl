@@ -74,21 +74,21 @@ end
     @test all(st .> 0)
 end
 
-@testset "TileView" begin
+@testset "TileBuffer" begin
     a = fill!(Array{Int}(5,5), 0)
-    v = @inferred(TileView(a, (2:3, 97:99)))
+    v = @inferred(TileBuffer(a, (2:3, 97:99)))
     @test ndims(v) == 2
     @test eltype(v) == Int
     @test indices(v) == (2:3, 97:99)
     v[2,97] = 1
     @test a[1] == 1
-    v = @inferred(TileView(v, (-1:1, 1:1)))
+    v = @inferred(TileBuffer(v, (-1:1, 1:1)))
     @test indices(v) == (-1:1, 1:1)
     @test v[-1,1] == 1
     @test v[0,1] == v[1,1] == 0
     v[0,1] = 2
     @test a[2] == 2
-    v = @inferred(TileView(v, (0:23,)))
+    v = @inferred(TileBuffer(v, (0:23,)))
     @test eltype(v) == Int
     @test ndims(v) == 1
     @test indices(v) == (0:23,)
@@ -97,9 +97,9 @@ end
     @unsafe v[24] = 7
     @test a[25] == 7
     @test (@unsafe v[24]) == 7
-    @test_throws DimensionMismatch TileView(a, (1:6,1:5))
-    @test_throws DimensionMismatch TileView(v, (1:5,1:6))
-    @test_throws DimensionMismatch TileView(a, (0:25,))
+    @test_throws DimensionMismatch TileBuffer(a, (1:6,1:5))
+    @test_throws DimensionMismatch TileBuffer(v, (1:5,1:6))
+    @test_throws DimensionMismatch TileBuffer(a, (0:25,))
 end
 
 nothing
