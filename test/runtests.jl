@@ -94,9 +94,11 @@ end
     @test indices(v) == (0:23,)
     @test v[1] == 2
     @test_throws BoundsError v[24]
-    @unsafe v[24] = 7
-    @test a[25] == 7
-    @test (@unsafe v[24]) == 7
+    if Base.JLOptions().can_inline == 1
+        @unsafe v[24] = 7
+        @test a[25] == 7
+        @test (@unsafe v[24]) == 7
+    end
     @test_throws DimensionMismatch TileBuffer(a, (1:6,1:5))
     @test_throws DimensionMismatch TileBuffer(v, (1:5,1:6))
     @test_throws DimensionMismatch TileBuffer(a, (0:25,))
