@@ -117,7 +117,7 @@ function TileBuffer{T}(::Type{T}, inds::Indices)
     TileBuffer(Array{T}(l), inds)
 end
 
-TileBuffer(v::TileBuffer, inds::Indices) = TileBuffer(v.buf, inds)
+TileBuffer(tb::TileBuffer, inds::Indices) = TileBuffer(tb.buf, inds)
 
 @inline function _tileview(a::Array, l::Dims)
     if size(a) == l
@@ -129,16 +129,18 @@ TileBuffer(v::TileBuffer, inds::Indices) = TileBuffer(v.buf, inds)
     end
 end
 
-Base.indices(v::TileBuffer) = indices(v.view)
+Base.indices(tb::TileBuffer) = indices(tb.view)
 
-@inline Base.getindex{T,N}(v::TileBuffer{T,N}, I::Vararg{Int,N}) = v.view[I...]
+@inline Base.getindex{T,N}(tb::TileBuffer{T,N}, I::Vararg{Int,N}) = tb.view[I...]
 
-@inline Base.setindex!{T,N}(v::TileBuffer{T,N}, val, I::Vararg{Int,N}) = v.view[I...] = val
+@inline Base.setindex!{T,N}(tb::TileBuffer{T,N}, val, I::Vararg{Int,N}) = tb.view[I...] = val
 
-@inline OffsetArrays.unsafe_getindex(v::TileBuffer, I...) = OffsetArrays.unsafe_getindex(v.view, I...)
+@inline OffsetArrays.unsafe_getindex(tb::TileBuffer, I...) = OffsetArrays.unsafe_getindex(tb.view, I...)
 
-@inline OffsetArrays.unsafe_setindex!(v::TileBuffer, val, I...) = OffsetArrays.unsafe_setindex!(v.view, val, I...)
+@inline OffsetArrays.unsafe_setindex!(tb::TileBuffer, val, I...) = OffsetArrays.unsafe_setindex!(tb.view, val, I...)
 
-Base.pointer(buf::TileBuffer) = pointer(parent(buf.view))
+Base.pointer(tb::TileBuffer) = pointer(parent(tb.view))
+
+Base.parent(tb::TileBuffer) = tb.buf
 
 end # module

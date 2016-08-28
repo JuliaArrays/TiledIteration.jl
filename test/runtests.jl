@@ -83,6 +83,7 @@ end
     v[2,97] = 1
     @test a[1] == 1
     p = pointer(v)
+    @test parent(v) === v.buf
     v = @inferred(TileBuffer(v, (-1:1, 1:1)))
     @test pointer(v) == p
     @test indices(v) == (-1:1, 1:1)
