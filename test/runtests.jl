@@ -82,13 +82,16 @@ end
     @test indices(v) == (2:3, 97:99)
     v[2,97] = 1
     @test a[1] == 1
+    p = pointer(v)
     v = @inferred(TileBuffer(v, (-1:1, 1:1)))
+    @test pointer(v) == p
     @test indices(v) == (-1:1, 1:1)
     @test v[-1,1] == 1
     @test v[0,1] == v[1,1] == 0
     v[0,1] = 2
     @test a[2] == 2
     v = @inferred(TileBuffer(v, (0:23,)))
+    @test pointer(v) == p
     @test eltype(v) == Int
     @test ndims(v) == 1
     @test indices(v) == (0:23,)
@@ -102,6 +105,17 @@ end
     @test_throws DimensionMismatch TileBuffer(a, (1:6,1:5))
     @test_throws DimensionMismatch TileBuffer(v, (1:5,1:6))
     @test_throws DimensionMismatch TileBuffer(a, (0:25,))
+    b = TileBuffer(Float64, (1:16,1:4))
+    @test eltype(b) == Float64
+    @test indices(b) == (1:16,1:4)
+    @test pointer(b) != p
+    p = pointer(b)
+    b = TileBuffer(b, (17:32,1:4))
+    @test pointer(b) == p
+    @unsafe begin
+        b[17,2] = 5.2
+        @test b[17,2] == 5.2
+    end
 end
 
 nothing

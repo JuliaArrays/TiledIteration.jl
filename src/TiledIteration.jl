@@ -140,6 +140,5 @@ Base.indices(v::TileBuffer) = indices(v.view)
 @inline OffsetArrays.unsafe_setindex!(v::TileBuffer, val, I...) = OffsetArrays.unsafe_setindex!(v.view, val, I...)
 
 Base.pointer(buf::TileBuffer) = pointer(parent(buf.view))
-Base.pointer(buf::TileBuffer, i) = pointer(parent(buf.view), i)
 
 end # module
