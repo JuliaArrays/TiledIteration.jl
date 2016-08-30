@@ -1,8 +1,8 @@
 # TiledIteration
 
-[![Build Status](https://travis-ci.org/timholy/TiledIteration.jl.svg?branch=master)](https://travis-ci.org/timholy/TiledIteration.jl)
+[![Build Status](https://travis-ci.org/JuliaArrays/TiledIteration.jl.svg?branch=master)](https://travis-ci.org/JuliaArrays/TiledIteration.jl)
 
-[![codecov.io](http://codecov.io/github/timholy/TiledIteration.jl/coverage.svg?branch=master)](http://codecov.io/github/timholy/TiledIteration.jl?branch=master)
+[![codecov.io](http://codecov.io/github/JuliaArrays/TiledIteration.jl/coverage.svg?branch=master)](http://codecov.io/github/JuliaArrays/TiledIteration.jl?branch=master)
 
 This Julia package handles some of the low-level details for writing
 cache-efficient, possibly-multithreaded code for multidimensional
