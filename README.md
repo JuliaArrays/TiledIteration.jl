@@ -81,6 +81,8 @@ would yield
  1  1  2  2  3  3  4  4
 ```
 
+See also "EdgeIterator" below.
+
 ### Determining the chunk size
 
 [Stencil computations](https://en.wikipedia.org/wiki/Stencil_code)
@@ -176,3 +178,47 @@ TiledIteration.TileBuffer{Float32,2,2} with indices -1:15×8:15:
 julia> pointer(buf)
 Ptr{Float32} @0x00007f79131fd550
 ```
+
+### EdgeIterator
+
+When performing stencil operations, oftentimes the edge of the array
+requires special treatment. Several approaches to handling the edges
+(adding explicit padding, or executing special code just when on the
+boundaries) can slow your algorithm down because of extra steps or
+branches.
+
+This package helps support implementations which first handle the
+"interior" of an array (for example using `TiledIterator` over just
+the interior) using a "fast path," and then handle just the edges by a
+(possibly) less carefully optimized algorithm. The key component of
+this is `EdgeIterator`:
+
+```julia
+outerrange = CartesianRange((-1:4, 0:3))
+innerrange = CartesianRange(( 1:3, 1:2))
+julia> for I in EdgeIterator(outerrange, innerrange)
+           @show I
+       end
+I = CartesianIndex{2}((-1,0))
+I = CartesianIndex{2}((0,0))
+I = CartesianIndex{2}((1,0))
+I = CartesianIndex{2}((2,0))
+I = CartesianIndex{2}((3,0))
+I = CartesianIndex{2}((4,0))
+I = CartesianIndex{2}((-1,1))
+I = CartesianIndex{2}((0,1))
+I = CartesianIndex{2}((4,1))
+I = CartesianIndex{2}((-1,2))
+I = CartesianIndex{2}((0,2))
+I = CartesianIndex{2}((4,2))
+I = CartesianIndex{2}((-1,3))
+I = CartesianIndex{2}((0,3))
+I = CartesianIndex{2}((1,3))
+I = CartesianIndex{2}((2,3))
+I = CartesianIndex{2}((3,3))
+I = CartesianIndex{2}((4,3))
+```
+
+The time required to visit these edge sites is on the order of the
+number of edge sites, not the order of the number of sites encompassed
+by `outerrange`, and consequently is efficient.

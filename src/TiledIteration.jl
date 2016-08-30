@@ -4,8 +4,11 @@ module TiledIteration
 
 using OffsetArrays
 using Base: tail, Indices
+using Base.IteratorsMD: inc
 
-export TileIterator, padded_tilesize, TileBuffer
+export TileIterator, EdgeIterator, padded_tilesize, TileBuffer
+
+### TileIterator ###
 
 const L1cachesize = 2^15
 const cachelinesize = 64
@@ -40,7 +43,43 @@ _getindices(ind, s, i) = first(ind)+(i-1)*s : min(last(ind),first(ind)+i*s-1)
 map3(f, ::Tuple{}, ::Tuple{}, ::Tuple{}) = ()
 @inline map3(f, a::Tuple, b::Tuple, c::Tuple) = (f(a[1], b[1], c[1]), map3(f, tail(a), tail(b), tail(c))...)
 
-### Calculating the size of tiles
+### EdgeIterator ###
+
+immutable EdgeIterator{N}
+    outer::CartesianRange{CartesianIndex{N}}
+    inner::CartesianRange{CartesianIndex{N}}
+
+    function EdgeIterator(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}})
+        ((inner.start ∈ outer) & (inner.stop ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
+        new(outer, inner)
+    end
+end
+"""
+    EdgeIterator(outer, inner)
+
+A Cartesian iterator that efficiently visits sites that are in `outer`
+but not in `inner`. This can be useful for calculating edge values
+that may require special treatment or boundary conditions.
+"""
+EdgeIterator{N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}}) = EdgeIterator{N}(outer, inner)
+EdgeIterator{N}(outer::Indices{N}, inner::Indices{N}) = EdgeIterator(CartesianRange(outer), CartesianRange(inner))
+
+Base.length(iter::EdgeIterator) = length(iter.outer) - length(iter.inner)
+
+@inline Base.start(iter::EdgeIterator) = _next(iter, start(iter.outer))
+@inline Base.done(iter::EdgeIterator, state) = done(iter.outer, state)
+@inline function Base.next(iter::EdgeIterator, state)
+    _, newI = next(iter.outer, state)
+    nextstate = _next(iter, newI)
+    state, nextstate
+end
+@inline function _next(iter::EdgeIterator, I::CartesianIndex)
+    !(I ∈ iter.inner) && return I
+    newI = CartesianIndex(inc((iter.inner.stop[1], tail(I.I)...), iter.outer.start.I, iter.outer.stop.I))
+    _next(iter, newI)
+end
+
+### Calculating the size of tiles ###
 
 # If kernelsize-1 is the amount of padding, and s is the extra width of the tile along
 # each axis, then the fraction of useful to total work is
