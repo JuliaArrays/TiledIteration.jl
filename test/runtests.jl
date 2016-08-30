@@ -20,6 +20,94 @@ using Base.Test
     end
 end
 
+@testset "edge iteration" begin
+    iter = EdgeIterator(CartesianRange((-1:4,0:3)), CartesianRange((1:3,1:2)))
+    @test collect(iter) == [CartesianIndex((-1,0)),
+                            CartesianIndex(( 0,0)),
+                            CartesianIndex(( 1,0)),
+                            CartesianIndex(( 2,0)),
+                            CartesianIndex(( 3,0)),
+                            CartesianIndex(( 4,0)),
+                            CartesianIndex((-1,1)),
+                            CartesianIndex(( 0,1)),
+                            CartesianIndex(( 4,1)),
+                            CartesianIndex((-1,2)),
+                            CartesianIndex(( 0,2)),
+                            CartesianIndex(( 4,2)),
+                            CartesianIndex((-1,3)),
+                            CartesianIndex(( 0,3)),
+                            CartesianIndex(( 1,3)),
+                            CartesianIndex(( 2,3)),
+                            CartesianIndex(( 3,3)),
+                            CartesianIndex(( 4,3))]
+    iter = EdgeIterator((0:3,0:3), (1:3,1:2))
+    @test collect(iter) == [CartesianIndex(( 0,0)),
+                            CartesianIndex(( 1,0)),
+                            CartesianIndex(( 2,0)),
+                            CartesianIndex(( 3,0)),
+                            CartesianIndex(( 0,1)),
+                            CartesianIndex(( 0,2)),
+                            CartesianIndex(( 0,3)),
+                            CartesianIndex(( 1,3)),
+                            CartesianIndex(( 2,3)),
+                            CartesianIndex(( 3,3))]
+    iter = EdgeIterator((1:4,0:3), (1:3,1:2))
+    @test collect(iter) == [CartesianIndex(( 1,0)),
+                            CartesianIndex(( 2,0)),
+                            CartesianIndex(( 3,0)),
+                            CartesianIndex(( 4,0)),
+                            CartesianIndex(( 4,1)),
+                            CartesianIndex(( 4,2)),
+                            CartesianIndex(( 1,3)),
+                            CartesianIndex(( 2,3)),
+                            CartesianIndex(( 3,3)),
+                            CartesianIndex(( 4,3))]
+    iter = EdgeIterator((-1:4,1:3), (1:3,1:2))
+    @test collect(iter) == [CartesianIndex((-1,1)),
+                            CartesianIndex(( 0,1)),
+                            CartesianIndex(( 4,1)),
+                            CartesianIndex((-1,2)),
+                            CartesianIndex(( 0,2)),
+                            CartesianIndex(( 4,2)),
+                            CartesianIndex((-1,3)),
+                            CartesianIndex(( 0,3)),
+                            CartesianIndex(( 1,3)),
+                            CartesianIndex(( 2,3)),
+                            CartesianIndex(( 3,3)),
+                            CartesianIndex(( 4,3))]
+    iter = EdgeIterator((-1:4,0:2), (1:3,1:2))
+    @test collect(iter) == [CartesianIndex((-1,0)),
+                            CartesianIndex(( 0,0)),
+                            CartesianIndex(( 1,0)),
+                            CartesianIndex(( 2,0)),
+                            CartesianIndex(( 3,0)),
+                            CartesianIndex(( 4,0)),
+                            CartesianIndex((-1,1)),
+                            CartesianIndex(( 0,1)),
+                            CartesianIndex(( 4,1)),
+                            CartesianIndex((-1,2)),
+                            CartesianIndex(( 0,2)),
+                            CartesianIndex(( 4,2))]
+    iter = EdgeIterator((-1:4,1:2), (1:3,1:2))
+    @test collect(iter) == [CartesianIndex((-1,1)),
+                            CartesianIndex(( 0,1)),
+                            CartesianIndex(( 4,1)),
+                            CartesianIndex((-1,2)),
+                            CartesianIndex(( 0,2)),
+                            CartesianIndex(( 4,2))]
+    iter = EdgeIterator((1:3,0:3), (1:3,1:2))
+    @test collect(iter) == [CartesianIndex(( 1,0)),
+                            CartesianIndex(( 2,0)),
+                            CartesianIndex(( 3,0)),
+                            CartesianIndex(( 1,3)),
+                            CartesianIndex(( 2,3)),
+                            CartesianIndex(( 3,3))]
+    iter = EdgeIterator((1:3,1:2), (1:3,1:2))
+    @test collect(iter) == []
+    @test_throws DimensionMismatch EdgeIterator((1:3,1:1), (1:3,1:2))
+    @test_throws DimensionMismatch EdgeIterator((1:3,1:2), (1:4,1:2))
+end
+
 @testset "padded sizes" begin
     @test @inferred(padded_tilesize(UInt8, (1,))) == (2^14,)
     @test @inferred(padded_tilesize(UInt16, (1,))) == (2^13,)
