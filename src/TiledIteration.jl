@@ -49,9 +49,9 @@ immutable EdgeIterator{N}
     outer::CartesianRange{CartesianIndex{N}}
     inner::CartesianRange{CartesianIndex{N}}
 
-    function EdgeIterator(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}})
+    function (::Type{EdgeIterator{N}}){N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}})
         ((inner.start ∈ outer) & (inner.stop ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
-        new(outer, inner)
+        new{N}(outer, inner)
     end
 end
 """

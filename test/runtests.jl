@@ -186,7 +186,8 @@ end
     @test indices(v) == (0:23,)
     @test v[1] == 2
     @test_throws BoundsError v[24]
-    if Base.JLOptions().can_inline == 1
+    opts = Base.JLOptions()
+    if opts.can_inline == 1 && opts.check_bounds == 0
         @unsafe v[24] = 7
         @test a[25] == 7
         @test (@unsafe v[24]) == 7
