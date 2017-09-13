@@ -13,13 +13,13 @@ export TileIterator, EdgeIterator, padded_tilesize, TileBuffer
 const L1cachesize = 2^15
 const cachelinesize = 64
 
-immutable TileIterator{N,I}
+struct TileIterator{N,I}
     inds::I
     sz::Dims{N}
     R::CartesianRange{CartesianIndex{N}}
 end
 
-function TileIterator{N}(inds::Indices{N}, sz::Dims{N})
+function TileIterator(inds::Indices{N}, sz::Dims{N}) where N
     ls = map(length, inds)
     ns = map(ceildiv, ls, sz)
     TileIterator{N,typeof(inds)}(inds, sz, CartesianRange(ns))
@@ -27,7 +27,7 @@ end
 ceildiv(l, s) = ceil(Int, l/s)
 
 Base.length(iter::TileIterator) = length(iter.R)
-Base.eltype{N}(iter::TileIterator{N}) = NTuple{N,UnitRange{Int}}
+Base.eltype(iter::TileIterator{N}) where {N} = NTuple{N,UnitRange{Int}}
 
 @inline Base.start(iter::TileIterator) = start(iter.R)
 @inline function Base.next(iter::TileIterator, state)
@@ -45,11 +45,11 @@ map3(f, ::Tuple{}, ::Tuple{}, ::Tuple{}) = ()
 
 ### EdgeIterator ###
 
-immutable EdgeIterator{N}
+struct EdgeIterator{N}
     outer::CartesianRange{CartesianIndex{N}}
     inner::CartesianRange{CartesianIndex{N}}
 
-    function (::Type{EdgeIterator{N}}){N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}})
+    function EdgeIterator{N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}}) where N
         ((inner.start ∈ outer) & (inner.stop ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
         new{N}(outer, inner)
     end
@@ -61,8 +61,8 @@ A Cartesian iterator that efficiently visits sites that are in `outer`
 but not in `inner`. This can be useful for calculating edge values
 that may require special treatment or boundary conditions.
 """
-EdgeIterator{N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}}) = EdgeIterator{N}(outer, inner)
-EdgeIterator{N}(outer::Indices{N}, inner::Indices{N}) = EdgeIterator(CartesianRange(outer), CartesianRange(inner))
+EdgeIterator(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}}) where {N} = EdgeIterator{N}(outer, inner)
+EdgeIterator(outer::Indices{N}, inner::Indices{N}) where {N} = EdgeIterator(CartesianRange(outer), CartesianRange(inner))
 
 Base.length(iter::EdgeIterator) = length(iter.outer) - length(iter.inner)
 
@@ -109,7 +109,7 @@ julia> padded_tilesize(Float64, (3,3))
 julia> padded_tilesize(Float32, (3,3,3))
 (64,6,6)
 """
-function padded_tilesize{T}(::Type{T}, kernelsize::Dims, ncache = 2)
+function padded_tilesize(::Type{T}, kernelsize::Dims, ncache = 2) where T
     nd = max(1, sum(x->x>1, kernelsize))
     # isbits(T) || return map(zero, kernelsize)
     # don't be too minimalist on the cache-friendly dim (use at least 2 cachelines)
@@ -127,7 +127,7 @@ end
 
 ### Tile shaping and coordinate transformation
 
-immutable TileBuffer{T,N,P} <: AbstractArray{T,N}
+struct TileBuffer{T,N,P} <: AbstractArray{T,N}
     view::OffsetArray{T,N,Array{T,N}}  # the currently-active view
     buf::Array{T,P}                    # the original backing buffer
 end
@@ -151,7 +151,7 @@ end
 Return a TileBuffer, allocating a new backing array of element type `T`
 and size determined by `inds`.
 """
-function TileBuffer{T}(::Type{T}, inds::Indices)
+function TileBuffer(::Type{T}, inds::Indices) where T
     l = map(length, inds)
     TileBuffer(Array{T}(l), inds)
 end
@@ -170,9 +170,9 @@ end
 
 Base.indices(tb::TileBuffer) = indices(tb.view)
 
-@inline Base.getindex{T,N}(tb::TileBuffer{T,N}, I::Vararg{Int,N}) = tb.view[I...]
+@inline Base.getindex(tb::TileBuffer{T,N}, I::Vararg{Int,N}) where {T,N} = tb.view[I...]
 
-@inline Base.setindex!{T,N}(tb::TileBuffer{T,N}, val, I::Vararg{Int,N}) = tb.view[I...] = val
+@inline Base.setindex!(tb::TileBuffer{T,N}, val, I::Vararg{Int,N}) where {T,N} = tb.view[I...] = val
 
 @inline OffsetArrays.unsafe_getindex(tb::TileBuffer, I...) = OffsetArrays.unsafe_getindex(tb.view, I...)
 
