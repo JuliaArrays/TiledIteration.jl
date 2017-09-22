@@ -13,17 +13,34 @@ export TileIterator, EdgeIterator, padded_tilesize, TileBuffer
 const L1cachesize = 2^15
 const cachelinesize = 64
 
-immutable TileIterator{N,I}
-    inds::I
-    sz::Dims{N}
-    R::CartesianRange{CartesianIndex{N}}
+if VERSION < v"0.7.0-DEV.880"
+    immutable TileIterator{N,I}
+        inds::I
+        sz::Dims{N}
+        R::CartesianRange{CartesianIndex{N}}
+    end
+
+    function TileIterator{N}(inds::Indices{N}, sz::Dims{N})
+        ls = map(length, inds)
+        ns = map(ceildiv, ls, sz)
+        TileIterator{N,typeof(inds)}(inds, sz, CartesianRange(ns))
+    end
+else
+    struct TileIterator{N,I,UR}
+        inds::I
+        sz::Dims{N}
+        R::CartesianRange{N,UR}
+    end
+
+    rangetype(::CartesianRange{N,T}) where {N,T} = T
+    function TileIterator(inds::Indices{N}, sz::Dims{N}) where N
+        ls = map(length, inds)
+        ns = map(ceildiv, ls, sz)
+        R = CartesianRange(ns)
+        TileIterator{N,typeof(inds),rangetype(R)}(inds, sz, R)
+    end
 end
 
-function TileIterator{N}(inds::Indices{N}, sz::Dims{N})
-    ls = map(length, inds)
-    ns = map(ceildiv, ls, sz)
-    TileIterator{N,typeof(inds)}(inds, sz, CartesianRange(ns))
-end
 ceildiv(l, s) = ceil(Int, l/s)
 
 Base.length(iter::TileIterator) = length(iter.R)
@@ -45,15 +62,34 @@ map3(f, ::Tuple{}, ::Tuple{}, ::Tuple{}) = ()
 
 ### EdgeIterator ###
 
-immutable EdgeIterator{N}
-    outer::CartesianRange{CartesianIndex{N}}
-    inner::CartesianRange{CartesianIndex{N}}
+if VERSION < v"0.7.0-DEV.880"
+    immutable EdgeIterator{N}
+        outer::CartesianRange{CartesianIndex{N}}
+        inner::CartesianRange{CartesianIndex{N}}
 
-    function (::Type{EdgeIterator{N}}){N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}})
-        ((inner.start ∈ outer) & (inner.stop ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
-        new{N}(outer, inner)
+        function (::Type{EdgeIterator{N}}){N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}})
+            ((inner.start ∈ outer) & (inner.stop ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
+            new{N}(outer, inner)
+        end
     end
+    EdgeIterator{N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}}) = EdgeIterator{N}(outer, inner)
+    EdgeIterator{N}(outer::Indices{N}, inner::Indices{N}) = EdgeIterator(CartesianRange(outer), CartesianRange(inner))
+else
+    struct EdgeIterator{N,UR}
+        outer::CartesianRange{N,UR}
+        inner::CartesianRange{N,UR}
+
+        function EdgeIterator{N,UR}(outer::CartesianRange{N}, inner::CartesianRange{N}) where {N,UR}
+            ((first(inner) ∈ outer) & (last(inner) ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
+            new(outer, inner)
+        end
+    end
+    EdgeIterator(outer::CartesianRange{N,UR}, inner::CartesianRange{N,UR}) where {N,UR} =
+        EdgeIterator{N,UR}(outer, inner)
+    EdgeIterator(outer::Indices{N}, inner::Indices{N}) where N =
+        EdgeIterator(promote(CartesianRange(outer), CartesianRange(inner))...)
 end
+
 """
     EdgeIterator(outer, inner)
 
@@ -61,8 +97,7 @@ A Cartesian iterator that efficiently visits sites that are in `outer`
 but not in `inner`. This can be useful for calculating edge values
 that may require special treatment or boundary conditions.
 """
-EdgeIterator{N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}}) = EdgeIterator{N}(outer, inner)
-EdgeIterator{N}(outer::Indices{N}, inner::Indices{N}) = EdgeIterator(CartesianRange(outer), CartesianRange(inner))
+EdgeIterator
 
 Base.length(iter::EdgeIterator) = length(iter.outer) - length(iter.inner)
 
@@ -75,7 +110,7 @@ Base.length(iter::EdgeIterator) = length(iter.outer) - length(iter.inner)
 end
 @inline function _next(iter::EdgeIterator, I::CartesianIndex)
     !(I ∈ iter.inner) && return I
-    newI = CartesianIndex(inc((iter.inner.stop[1], tail(I.I)...), iter.outer.start.I, iter.outer.stop.I))
+    newI = CartesianIndex(inc((last(iter.inner)[1], tail(I.I)...), first(iter.outer).I, last(iter.outer).I))
     _next(iter, newI)
 end
 
