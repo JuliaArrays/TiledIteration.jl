@@ -13,45 +13,40 @@ export TileIterator, EdgeIterator, padded_tilesize, TileBuffer
 const L1cachesize = 2^15
 const cachelinesize = 64
 
-if VERSION < v"0.7.0-DEV.880"
-    struct TileIterator{N,I}
-        inds::I
-        sz::Dims{N}
-        R::CartesianRange{CartesianIndex{N}}
-    end
-
-    function TileIterator(inds::Indices{N}, sz::Dims{N}) where N
-        ls = map(length, inds)
-        ns = map(ceildiv, ls, sz)
-        TileIterator{N,typeof(inds)}(inds, sz, CartesianRange(ns))
-    end
-else
-    struct TileIterator{N,I,UR}
-        inds::I
-        sz::Dims{N}
-        R::CartesianRange{N,UR}
-    end
-
-    rangetype(::CartesianRange{N,T}) where {N,T} = T
-    function TileIterator(inds::Indices{N}, sz::Dims{N}) where N
-        ls = map(length, inds)
-        ns = map(ceildiv, ls, sz)
-        R = CartesianRange(ns)
-        TileIterator{N,typeof(inds),rangetype(R)}(inds, sz, R)
-    end
+struct TileIterator{N,I,UR}
+    inds::I
+    sz::Dims{N}
+    R::CartesianIndices{N,UR}
 end
+rangetype(::CartesianIndices{N,T}) where {N,T} = T
+function TileIterator(inds::Indices{N}, sz::Dims{N}) where N
+    ls = map(length, inds)
+    ns = map(ceildiv, ls, sz)
+    R = CartesianIndices(ns)
+    TileIterator{N,typeof(inds),rangetype(R)}(inds, sz, R)
+end
+
+Iterators.IteratorEltype(::Type{<:TileIterator}) = Iterators.HasEltype()
 
 ceildiv(l, s) = ceil(Int, l/s)
 
 Base.length(iter::TileIterator) = length(iter.R)
 Base.eltype(iter::TileIterator{N}) where {N} = NTuple{N,UnitRange{Int}}
 
-@inline Base.start(iter::TileIterator) = start(iter.R)
-@inline function Base.next(iter::TileIterator, state)
-    I, newstate = next(iter.R, state)
-    getindices(iter, I), newstate
+function Base.iterate(iter::TileIterator)
+    iterR = iterate(iter.R)
+    iterR === nothing && return nothing
+    I, state = iterR
+    return getindices(iter, I), state
 end
-@inline Base.done(iter::TileIterator, state) = done(iter.R, state)
+function Base.iterate(iter::TileIterator, state)
+    iterR = iterate(iter.R, state)
+    iterR === nothing && return nothing
+    I, newstate = iterR
+    return getindices(iter, I), newstate
+end
+
+Base.show(io::IO, iter::TileIterator) = print(io, "TileIterator(", iter.inds, ", ", iter.sz, ')')
 
 @inline function getindices(iter::TileIterator, I::CartesianIndex)
     map3(_getindices, iter.inds, iter.sz, I.I)
@@ -62,33 +57,18 @@ map3(f, ::Tuple{}, ::Tuple{}, ::Tuple{}) = ()
 
 ### EdgeIterator ###
 
-if VERSION < v"0.7.0-DEV.880"
-    struct EdgeIterator{N}
-        outer::CartesianRange{CartesianIndex{N}}
-        inner::CartesianRange{CartesianIndex{N}}
-
-        function EdgeIterator{N}(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}}) where N
-            ((inner.start ∈ outer) & (inner.stop ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
-            new{N}(outer, inner)
-        end
+struct EdgeIterator{N,UR}
+    outer::CartesianIndices{N,UR}
+    inner::CartesianIndices{N,UR}
+    function EdgeIterator{N,UR}(outer::CartesianIndices{N}, inner::CartesianIndices{N}) where {N,UR}
+        ((first(inner) ∈ outer) & (last(inner) ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
+        new(outer, inner)
     end
-    EdgeIterator(outer::CartesianRange{CartesianIndex{N}}, inner::CartesianRange{CartesianIndex{N}}) where {N} = EdgeIterator{N}(outer, inner)
-    EdgeIterator(outer::Indices{N}, inner::Indices{N}) where {N} = EdgeIterator(CartesianRange(outer), CartesianRange(inner))
-else
-    struct EdgeIterator{N,UR}
-        outer::CartesianRange{N,UR}
-        inner::CartesianRange{N,UR}
-
-        function EdgeIterator{N,UR}(outer::CartesianRange{N}, inner::CartesianRange{N}) where {N,UR}
-            ((first(inner) ∈ outer) & (last(inner) ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
-            new(outer, inner)
-        end
-    end
-    EdgeIterator(outer::CartesianRange{N,UR}, inner::CartesianRange{N,UR}) where {N,UR} =
-        EdgeIterator{N,UR}(outer, inner)
-    EdgeIterator(outer::Indices{N}, inner::Indices{N}) where N =
-        EdgeIterator(promote(CartesianRange(outer), CartesianRange(inner))...)
 end
+EdgeIterator(outer::CartesianIndices{N,UR}, inner::CartesianIndices{N,UR}) where {N,UR} =
+    EdgeIterator{N,UR}(outer, inner)
+EdgeIterator(outer::Indices{N}, inner::Indices{N}) where N =
+    EdgeIterator(promote(CartesianIndices(outer), CartesianIndices(inner))...)
 
 """
     EdgeIterator(outer, inner)
@@ -99,20 +79,32 @@ that may require special treatment or boundary conditions.
 """
 EdgeIterator
 
+Iterators.IteratorEltype(::Type{<:EdgeIterator}) = Iterators.HasEltype()
+
+Base.eltype(::Type{EdgeIterator{N,UR}}) where {N,UR} = CartesianIndex{N}
 Base.length(iter::EdgeIterator) = length(iter.outer) - length(iter.inner)
 
-@inline Base.start(iter::EdgeIterator) = _next(iter, start(iter.outer))
-@inline Base.done(iter::EdgeIterator, state) = done(iter.outer, state)
-@inline function Base.next(iter::EdgeIterator, state)
-    _, newI = next(iter.outer, state)
-    nextstate = _next(iter, newI)
-    state, nextstate
+function Base.iterate(iter::EdgeIterator)
+    iterouter = iterate(iter.outer)
+    iterouter === nothing && return nothing
+    item = nextedgeitem(iter, iterouter[2])
+    item ∉ iter.outer && return nothing
+    return item, item
 end
-@inline function _next(iter::EdgeIterator, I::CartesianIndex)
+function Base.iterate(iter::EdgeIterator, state)
+    iterouter = iterate(iter.outer, state)
+    iterouter === nothing && return nothing
+    item = nextedgeitem(iter, iterouter[2])
+    return item, item
+end
+
+@inline function nextedgeitem(iter::EdgeIterator, I::CartesianIndex)
     !(I ∈ iter.inner) && return I
     newI = CartesianIndex(inc((last(iter.inner)[1], tail(I.I)...), first(iter.outer).I, last(iter.outer).I))
-    _next(iter, newI)
+    nextedgeitem(iter, newI)
 end
+
+Base.show(io::IO, iter::EdgeIterator) = print(io, "EdgeIterator(", iter.outer.indices, ", ", iter.inner.indices, ')')
 
 ### Calculating the size of tiles ###
 
@@ -188,7 +180,7 @@ and size determined by `inds`.
 """
 function TileBuffer(::Type{T}, inds::Indices) where T
     l = map(length, inds)
-    TileBuffer(Array{T}(l), inds)
+    TileBuffer(Array{T}(undef, l), inds)
 end
 
 TileBuffer(tb::TileBuffer, inds::Indices) = TileBuffer(tb.buf, inds)
@@ -203,7 +195,7 @@ TileBuffer(tb::TileBuffer, inds::Indices) = TileBuffer(tb.buf, inds)
     end
 end
 
-Base.indices(tb::TileBuffer) = indices(tb.view)
+Base.axes(tb::TileBuffer) = axes(tb.view)
 
 @inline Base.getindex(tb::TileBuffer{T,N}, I::Vararg{Int,N}) where {T,N} = tb.view[I...]
 

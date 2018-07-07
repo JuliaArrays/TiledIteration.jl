@@ -24,41 +24,41 @@ To iterate over disjoint tiles of a larger array, use a `TileIterator`:
 using TiledIteration
 
 A = rand(1000,1000);   # our big array
-for tileinds in TileIterator(indices(A), (128,8))
-    @show tileinds
+for tileaxs in TileIterator(axes(A), (128,8))
+    @show tileaxs
 end
 ```
 
 This produces
 ```julia
-tileinds = (1:128,1:8)
-tileinds = (129:256,1:8)
-tileinds = (257:384,1:8)
-tileinds = (385:512,1:8)
-tileinds = (513:640,1:8)
-tileinds = (641:768,1:8)
-tileinds = (769:896,1:8)
-tileinds = (897:1000,1:8)
-tileinds = (1:128,9:16)
-tileinds = (129:256,9:16)
-tileinds = (257:384,9:16)
-tileinds = (385:512,9:16)
+tileaxs = (1:128,1:8)
+tileaxs = (129:256,1:8)
+tileaxs = (257:384,1:8)
+tileaxs = (385:512,1:8)
+tileaxs = (513:640,1:8)
+tileaxs = (641:768,1:8)
+tileaxs = (769:896,1:8)
+tileaxs = (897:1000,1:8)
+tileaxs = (1:128,9:16)
+tileaxs = (129:256,9:16)
+tileaxs = (257:384,9:16)
+tileaxs = (385:512,9:16)
 ...
 ```
 
-You can see that the total indices range is split up into chunks,
+You can see that the total axes range is split up into chunks,
 which are of size `(128,8)` except at the edges of `A`. Naturally,
-these indices serve as the basis for processing individual chunks of
+these axes serve as the basis for processing individual chunks of
 the array.
 
 As a further example, suppose you've started julia with `JULIA_NUM_THREADS=4`; then
 
 ```julia
 function fillid!(A, tilesz)
-    tileinds_all = collect(TileIterator(indices(A), tilesz))
+    tileinds_all = collect(TileIterator(axes(A), tilesz))
     Threads.@threads for i = 1:length(tileinds_all)
-        tileinds = tileinds_all[i]
-        A[tileinds...] = Threads.threadid()
+        tileaxs = tileinds_all[i]
+        A[tileaxs...] .= Threads.threadid()
     end
     A
 end
@@ -112,9 +112,9 @@ julia> padded_tilesize(Float32, (3,3,3))
 To allocate temporary storage while working with tiles, use `TileBuffer`:
 
 ```julia
-julia> tileinds = (-1:15, 0:7)  # really this might have come from TileIterator
+julia> tileaxs = (-1:15, 0:7)  # really this might have come from TileIterator
 
-julia> buf = TileBuffer(Float32, tileinds)
+julia> buf = TileBuffer(Float32, tileaxs)
 TiledIteration.TileBuffer{Float32,2,2} with indices -1:15×0:7:
  0.0  0.0          2.38221f-44  0.0          0.0          0.0          9.3887f-44   0.0
  0.0  1.26117f-44  0.0          0.0          0.0          8.26766f-44  0.0          0.0
@@ -194,29 +194,29 @@ the interior) using a "fast path," and then handle just the edges by a
 this is `EdgeIterator`:
 
 ```julia
-outerrange = CartesianRange((-1:4, 0:3))
-innerrange = CartesianRange(( 1:3, 1:2))
+outerrange = CartesianIndices((-1:4, 0:3))
+innerrange = CartesianIndices(( 1:3, 1:2))
 julia> for I in EdgeIterator(outerrange, innerrange)
            @show I
        end
-I = CartesianIndex{2}((-1,0))
-I = CartesianIndex{2}((0,0))
-I = CartesianIndex{2}((1,0))
-I = CartesianIndex{2}((2,0))
-I = CartesianIndex{2}((3,0))
-I = CartesianIndex{2}((4,0))
-I = CartesianIndex{2}((-1,1))
-I = CartesianIndex{2}((0,1))
-I = CartesianIndex{2}((4,1))
-I = CartesianIndex{2}((-1,2))
-I = CartesianIndex{2}((0,2))
-I = CartesianIndex{2}((4,2))
-I = CartesianIndex{2}((-1,3))
-I = CartesianIndex{2}((0,3))
-I = CartesianIndex{2}((1,3))
-I = CartesianIndex{2}((2,3))
-I = CartesianIndex{2}((3,3))
-I = CartesianIndex{2}((4,3))
+I = CartesianIndex(-1, 0)
+I = CartesianIndex(0, 0)
+I = CartesianIndex(1, 0)
+I = CartesianIndex(2, 0)
+I = CartesianIndex(3, 0)
+I = CartesianIndex(4, 0)
+I = CartesianIndex(-1, 1)
+I = CartesianIndex(0, 1)
+I = CartesianIndex(4, 1)
+I = CartesianIndex(-1, 2)
+I = CartesianIndex(0, 2)
+I = CartesianIndex(4, 2)
+I = CartesianIndex(-1, 3)
+I = CartesianIndex(0, 3)
+I = CartesianIndex(1, 3)
+I = CartesianIndex(2, 3)
+I = CartesianIndex(3, 3)
+I = CartesianIndex(4, 3)
 ```
 
 The time required to visit these edge sites is on the order of the
