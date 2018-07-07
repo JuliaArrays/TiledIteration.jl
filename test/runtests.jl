@@ -1,18 +1,18 @@
 using TiledIteration, OffsetArrays
-using Base.Test
+using Test
 
 @testset "tiled iteration" begin
     sz = (3,5)
     for i1 = -3:2, i2 = -1:5
         for l1 = 2:13, l2 = 1:16
             inds = (i1:i1+l1-1, i2:i2+l2-1)
-            A = fill!(OffsetArray{Int}(inds), 0)
+            A = fill!(OffsetArray{Int}(undef, inds), 0)
             k = 0
             for tileinds in TileIterator(inds, sz)
                 tile = A[tileinds...]
                 @test !isempty(tile)
                 @test all(tile .== 0)
-                A[tileinds...] = (k+=1)
+                A[tileinds...] .= (k+=1)
             end
             @test minimum(A) == 1
             @test eltype(collect(TileIterator(inds, sz))) == Tuple{UnitRange{Int}, UnitRange{Int}}
@@ -21,7 +21,7 @@ using Base.Test
 end
 
 @testset "edge iteration" begin
-    iter = EdgeIterator(CartesianRange((-1:4,0:3)), CartesianRange((1:3,1:2)))
+    iter = EdgeIterator(CartesianIndices((-1:4,0:3)), CartesianIndices((1:3,1:2)))
     @test collect(iter) == [CartesianIndex((-1,0)),
                             CartesianIndex(( 0,0)),
                             CartesianIndex(( 1,0)),
@@ -124,7 +124,7 @@ end
 
 @testset "threads" begin
     function sumtiles(A, sz)
-        indsA = indices(A)
+        indsA = axes(A)
         iter = TileIterator(indsA, sz)
         sums = zeros(eltype(A), length(iter))
         for (i,tileinds) in enumerate(iter)
@@ -138,7 +138,7 @@ end
         sums
     end
     function sumtiles_threaded(A, sz)
-        indsA = indices(A)
+        indsA = axes(A)
         iter = TileIterator(indsA, sz)
         allinds = collect(iter)
         sums = zeros(eltype(A), length(iter))
@@ -155,7 +155,7 @@ end
     end
 
     Asz, tilesz = Base.JLOptions().can_inline == 1 ? ((1000,1000), (100,100)) : ((100,100), (10,10))
-    A = rand(Asz)
+    A = rand(Float64, Asz)
     snt = sumtiles(A, tilesz)
     st = sumtiles_threaded(A, tilesz)
     @test snt == st
@@ -163,18 +163,18 @@ end
 end
 
 @testset "TileBuffer" begin
-    a = fill!(Array{Int}(5,5), 0)
+    a = fill!(Array{Int}(undef,5,5), 0)
     v = @inferred(TileBuffer(a, (2:3, 97:99)))
     @test ndims(v) == 2
     @test eltype(v) == Int
-    @test indices(v) == (2:3, 97:99)
+    @test axes(v) == (2:3, 97:99)
     v[2,97] = 1
     @test a[1] == 1
     p = pointer(v)
     @test parent(v) === v.buf
     v = @inferred(TileBuffer(v, (-1:1, 1:1)))
     @test pointer(v) == p
-    @test indices(v) == (-1:1, 1:1)
+    @test axes(v) == (-1:1, 1:1)
     @test v[-1,1] == 1
     @test v[0,1] == v[1,1] == 0
     v[0,1] = 2
@@ -183,7 +183,7 @@ end
     @test pointer(v) == p
     @test eltype(v) == Int
     @test ndims(v) == 1
-    @test indices(v) == (0:23,)
+    @test axes(v) == (0:23,)
     @test v[1] == 2
     @test_throws BoundsError v[24]
     opts = Base.JLOptions()
@@ -197,7 +197,7 @@ end
     @test_throws DimensionMismatch TileBuffer(a, (0:25,))
     b = TileBuffer(Float64, (1:16,1:4))
     @test eltype(b) == Float64
-    @test indices(b) == (1:16,1:4)
+    @test axes(b) == (1:16,1:4)
     @test pointer(b) != p
     p = pointer(b)
     b = TileBuffer(b, (17:32,1:4))
