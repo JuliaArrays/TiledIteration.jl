@@ -3,7 +3,7 @@ __precompile__()
 module TiledIteration
 
 using OffsetArrays
-using Base: tail, Indices
+using Base: tail, Indices, @propagate_inbounds
 using Base.IteratorsMD: inc
 
 export TileIterator, EdgeIterator, padded_tilesize, TileBuffer
@@ -196,14 +196,11 @@ TileBuffer(tb::TileBuffer, inds::Indices) = TileBuffer(tb.buf, inds)
 end
 
 Base.axes(tb::TileBuffer) = axes(tb.view)
+Base.size(tb::TileBuffer) = size(tb.view)
 
-@inline Base.getindex(tb::TileBuffer{T,N}, I::Vararg{Int,N}) where {T,N} = tb.view[I...]
+@inline @propagate_inbounds Base.getindex(tb::TileBuffer{T,N}, I::Vararg{Int,N}) where {T,N} = tb.view[I...]
 
-@inline Base.setindex!(tb::TileBuffer{T,N}, val, I::Vararg{Int,N}) where {T,N} = tb.view[I...] = val
-
-@inline OffsetArrays.unsafe_getindex(tb::TileBuffer, I...) = OffsetArrays.unsafe_getindex(tb.view, I...)
-
-@inline OffsetArrays.unsafe_setindex!(tb::TileBuffer, val, I...) = OffsetArrays.unsafe_setindex!(tb.view, val, I...)
+@inline @propagate_inbounds Base.setindex!(tb::TileBuffer{T,N}, val, I::Vararg{Int,N}) where {T,N} = tb.view[I...] = val
 
 Base.pointer(tb::TileBuffer) = pointer(parent(tb.view))
 
