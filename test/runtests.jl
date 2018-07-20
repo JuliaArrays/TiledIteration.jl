@@ -106,6 +106,10 @@ end
     @test collect(iter) == []
     @test_throws DimensionMismatch EdgeIterator((1:3,1:1), (1:3,1:2))
     @test_throws DimensionMismatch EdgeIterator((1:3,1:2), (1:4,1:2))
+    iter = EdgeIterator((Base.OneTo(2),Base.OneTo(3)),(2:2,1:3))
+    for it in iter
+        @test it ∈ iter.outer
+    end
 end
 
 @testset "padded sizes" begin
