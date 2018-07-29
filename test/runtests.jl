@@ -106,6 +106,9 @@ end
     @test collect(iter) == []
     @test_throws DimensionMismatch EdgeIterator((1:3,1:1), (1:3,1:2))
     @test_throws DimensionMismatch EdgeIterator((1:3,1:2), (1:4,1:2))
+    iter = EdgeIterator(CartesianIndices((0:4,)), CartesianIndices(1:3))
+    @test collect(iter) == [CartesianIndex(0,),
+                            CartesianIndex(4,)]
 end
 
 @testset "padded sizes" begin

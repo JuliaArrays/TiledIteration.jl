@@ -57,16 +57,16 @@ map3(f, ::Tuple{}, ::Tuple{}, ::Tuple{}) = ()
 
 ### EdgeIterator ###
 
-struct EdgeIterator{N,UR}
-    outer::CartesianIndices{N,UR}
-    inner::CartesianIndices{N,UR}
-    function EdgeIterator{N,UR}(outer::CartesianIndices{N}, inner::CartesianIndices{N}) where {N,UR}
+struct EdgeIterator{N,UR1,UR2}
+    outer::CartesianIndices{N,UR1}
+    inner::CartesianIndices{N,UR2}
+    function EdgeIterator{N,UR1,UR2}(outer::CartesianIndices{N}, inner::CartesianIndices{N}) where {N,UR1,UR2}
         ((first(inner) ∈ outer) & (last(inner) ∈ outer)) || throw(DimensionMismatch("$inner must be in the interior of $outer"))
         new(outer, inner)
     end
 end
-EdgeIterator(outer::CartesianIndices{N,UR}, inner::CartesianIndices{N,UR}) where {N,UR} =
-    EdgeIterator{N,UR}(outer, inner)
+EdgeIterator(outer::CartesianIndices{N,UR1}, inner::CartesianIndices{N,UR2}) where {N,UR1,UR2} =
+    EdgeIterator{N,UR1,UR2}(outer, inner)
 EdgeIterator(outer::Indices{N}, inner::Indices{N}) where N =
     EdgeIterator(promote(CartesianIndices(outer), CartesianIndices(inner))...)
 
@@ -81,7 +81,7 @@ EdgeIterator
 
 Iterators.IteratorEltype(::Type{<:EdgeIterator}) = Iterators.HasEltype()
 
-Base.eltype(::Type{EdgeIterator{N,UR}}) where {N,UR} = CartesianIndex{N}
+Base.eltype(::Type{EdgeIterator{N,UR1,UR2}}) where {N,UR1,UR2} = CartesianIndex{N}
 Base.length(iter::EdgeIterator) = length(iter.outer) - length(iter.inner)
 
 function Base.iterate(iter::EdgeIterator)
