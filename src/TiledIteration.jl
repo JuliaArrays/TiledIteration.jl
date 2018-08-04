@@ -95,6 +95,7 @@ function Base.iterate(iter::EdgeIterator, state)
     iterouter = iterate(iter.outer, state)
     iterouter === nothing && return nothing
     item = nextedgeitem(iter, iterouter[2])
+    item.I[end] > last(iter.outer.indices[end]) && return nothing
     return item, item
 end
 
