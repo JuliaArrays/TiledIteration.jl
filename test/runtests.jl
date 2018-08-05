@@ -109,6 +109,14 @@ end
     iter = EdgeIterator(CartesianIndices((0:4,)), CartesianIndices(1:3))
     @test collect(iter) == [CartesianIndex(0,),
                             CartesianIndex(4,)]
+    iter = EdgeIterator((Base.OneTo(2),Base.OneTo(3)),(2:2,1:3))
+    for it in iter
+        @test it ∈ iter.outer
+    end
+    iter = EdgeIterator(CartesianIndices((1:4,)),CartesianIndices((2:4,)))
+    for it in iter
+        @test it ∈ iter.outer
+    end
 end
 
 @testset "padded sizes" begin
