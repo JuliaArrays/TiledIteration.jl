@@ -199,9 +199,9 @@ end
     @test_throws BoundsError v[24]
     opts = Base.JLOptions()
     if opts.can_inline == 1 && opts.check_bounds == 0
-        @unsafe v[24] = 7
+        @inbounds v[24] = 7
         @test a[25] == 7
-        @test (@unsafe v[24]) == 7
+        @test (@inbounds v[24]) == 7
     end
     @test_throws DimensionMismatch TileBuffer(a, (1:6,1:5))
     @test_throws DimensionMismatch TileBuffer(v, (1:5,1:6))
@@ -213,7 +213,7 @@ end
     p = pointer(b)
     b = TileBuffer(b, (17:32,1:4))
     @test pointer(b) == p
-    @unsafe begin
+    @inbounds begin
         b[17,2] = 5.2
         @test b[17,2] == 5.2
     end
