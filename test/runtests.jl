@@ -173,6 +173,9 @@ end
     @test all(st .> 0)
 end
 
+setoob!(v, val) = @inbounds v[24] = val
+getoob(v) = @inbounds v[24]
+
 @testset "TileBuffer" begin
     a = fill!(Array{Int}(undef,5,5), 0)
     v = @inferred(TileBuffer(a, (2:3, 97:99)))
@@ -199,9 +202,9 @@ end
     @test_throws BoundsError v[24]
     opts = Base.JLOptions()
     if opts.can_inline == 1 && opts.check_bounds == 0
-        @inbounds v[24] = 7
+        setoob!(v, 7)
         @test a[25] == 7
-        @test (@inbounds v[24]) == 7
+        @test getoob(v) == 7
     end
     @test_throws DimensionMismatch TileBuffer(a, (1:6,1:5))
     @test_throws DimensionMismatch TileBuffer(v, (1:5,1:6))
