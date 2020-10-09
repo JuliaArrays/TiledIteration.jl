@@ -4,6 +4,13 @@ using OffsetArrays
 using Base: tail, Indices, @propagate_inbounds
 using Base.IteratorsMD: inc
 
+if VERSION < v"1.6.0-DEV.1174"
+    _inc(state, iter) = inc(state, first(iter).I, last(iter).I)
+else
+    # https://github.com/JuliaLang/julia/pull/37829
+    _inc(state, iter) = inc(state, iter.indices)
+end
+
 export TileIterator, EdgeIterator, padded_tilesize, TileBuffer
 
 ### TileIterator ###
@@ -99,7 +106,8 @@ end
 
 @inline function nextedgeitem(iter::EdgeIterator, I::CartesianIndex)
     !(I ∈ iter.inner) && return I
-    newI = CartesianIndex(inc((last(iter.inner)[1], tail(I.I)...), first(iter.outer).I, last(iter.outer).I))
+    state = (last(iter.inner)[1], tail(I.I)...)
+    newI = CartesianIndex(_inc(state, iter.outer))
     nextedgeitem(iter, newI)
 end
 
