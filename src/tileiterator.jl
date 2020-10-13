@@ -59,46 +59,51 @@ export Fixed
 struct Fixed{V}
     value::V
 end
+Fixed() = Fixed(nothing)
+Fixed(o::Fixed) = o
 
 export Balanced
 struct Balanced{V}
     value::V
 end
+Balanced() = Balanced(nothing)
+Balanced(o::Balanced) = o
 
 function TileIterator(covers1d::NTuple{N, AbstractVector{UnitRange{Int}}}) where {N}
     C = typeof(covers1d)
     return TileIterator{N, C}(covers1d)
 end
 
-function compute_stoppings(axes, tilesize::Fixed)
-    map(FixedLength, tilesize.value)
+function compute_stoppings(axes, tilesize::Dims, stride::Balanced)
+    map(FixedLength, tilesize)
 end
 
-function compute_stoppings(axes, tilesize::Dims)
+function compute_stoppings(axes, tilesize::Dims, stride::Fixed)
     map(axes, tilesize) do ax, maxlen
         maxstop = last(ax)
         LengthAtMost(maxlen, maxstop)
     end
 end
 
-function compute_offsetss(axes, tilesize::Dims)
-    map(axes, tilesize) do ax, tilelen
-        firstoffset = first(ax) - 1
-        stepcount = ceil(Int, (last(ax) - first(ax)) / tilelen)
-        if first(ax) + stepcount * tilelen <= last(ax)
-            stepcount += 1
+function compute_offsetss(axes, tilesize::Dims, stride::Fixed)
+    map(axes, tilesize, stride.value) do ax, tilelen, step
+        lo = first(ax)
+        hi = last(ax)
+        stepcount = if tilelen <= step
+            floor(Int, (hi - lo) / step) + 1
+        else
+            ceil(Int, (hi + 1 - lo - tilelen) / step) + 1
         end
-        r = range(firstoffset, step=tilelen, length=stepcount)
-        @assert last(ax) - tilelen <= last(r) <= last(ax)
-        r
+        firstoffset = lo - 1
+        range(firstoffset, step=step, length=stepcount)
     end
 end
 
-function compute_offsetss(axes, tilesize::Fixed)
-    map(axes, tilesize.value) do ax, tilelen
+function compute_offsetss(axes, tilesize::Dims, stride::Balanced)
+    map(axes, tilesize, stride.value) do ax, tilelen, s
         firstoffset = first(ax)-1
         lastoffset = last(ax) - tilelen
-        stepcount = ceil(Int, (lastoffset - firstoffset) / tilelen) + 1
+        stepcount = ceil(Int, (lastoffset - firstoffset) / s) + 1
         r = quantizedrange(firstoffset, stop=lastoffset, length=stepcount)
         @assert last(ax) - tilelen <= last(r) <= last(ax)
         r
@@ -109,22 +114,16 @@ function TileIterator(axes::Indices{N}, tilesize::Dims{N}) where {N}
     TileIterator(axes,tilesize=tilesize)::TileIterator{N}
 end
 
-function check_axes_tilesize_stride(axes, tilesize, stride)
-    if stride === tilesize === nothing
-        msg = "At least one of `tilesize` or `stride` must be provided"
-        throw(ArgumentError(msg))
-    else
+resolve_stride(tilesize::Dims, stride::Nothing) = Fixed(tilesize)
+resolve_stride(tilesize::Dims, stride::Balanced{Nothing}) = Balanced(tilesize)
+resolve_stride(tilesize::Dims, stride::Fixed{Nothing}) = Fixed(tilesize)
+resolve_stride(tilesize::Dims, stride::Union{Fixed, Balanced}) = stride
+resolve_stride(tilesize::Dims, stride::Dims) = Fixed(stride)
 
-    end
-end
-
-function TileIterator(axes::Indices; tilesize=nothing, stride=nothing)
-    if stride !== nothing
-        throw(ArgumentError("stride not yet implemented"))
-    end
-    check_axes_tilesize_stride(axes, tilesize, stride)
-    offsetss = compute_offsetss(axes, tilesize)
-    stoppings = compute_stoppings(axes, tilesize)
+function TileIterator(axes::Indices; tilesize, stride=nothing)
+    stride = resolve_stride(tilesize, stride)
+    offsetss = compute_offsetss(axes, tilesize, stride)
+    stoppings = compute_stoppings(axes, tilesize, stride)
     covers1d = map(offsetss, stoppings) do offsets, stopping
         CoveredRange(offsets, stopping)
     end
