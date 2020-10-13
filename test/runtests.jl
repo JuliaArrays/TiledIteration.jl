@@ -1,6 +1,22 @@
 using TiledIteration, OffsetArrays
 using Test
 
+@testset "TileIterator small examples" begin
+    titr = @inferred TileIterator((1:10,), (3,))
+    @test collect(titr) == [
+        (1:3,),
+        (4:6,),
+        (7:9,),
+        (10:10,)]
+
+    titr = @inferred TileIterator((1:10,), tilesize=Fixed((3,)))
+    @test collect(titr) == [(1:3,), (3:5,), (6:8,), (8:10,)]
+
+    titr = @inferred TileIterator((1:4,), tilesize=Fixed((2,)))
+    @test collect(titr) == [(1:2,), (3:4,)]
+
+end
+
 @testset "tiled iteration" begin
     sz = (3,5)
     for i1 = -3:2, i2 = -1:5

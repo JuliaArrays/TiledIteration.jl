@@ -13,52 +13,10 @@ end
 
 export TileIterator, EdgeIterator, padded_tilesize, TileBuffer
 
-### TileIterator ###
+include("tileiterator.jl")
 
 const L1cachesize = 2^15
 const cachelinesize = 64
-
-struct TileIterator{N,I,UR}
-    inds::I
-    sz::Dims{N}
-    R::CartesianIndices{N,UR}
-end
-rangetype(::CartesianIndices{N,T}) where {N,T} = T
-function TileIterator(inds::Indices{N}, sz::Dims{N}) where N
-    ls = map(length, inds)
-    ns = map(ceildiv, ls, sz)
-    R = CartesianIndices(ns)
-    TileIterator{N,typeof(inds),rangetype(R)}(inds, sz, R)
-end
-
-Iterators.IteratorEltype(::Type{<:TileIterator}) = Iterators.HasEltype()
-
-ceildiv(l, s) = ceil(Int, l/s)
-
-Base.length(iter::TileIterator) = length(iter.R)
-Base.eltype(iter::TileIterator{N}) where {N} = NTuple{N,UnitRange{Int}}
-
-function Base.iterate(iter::TileIterator)
-    iterR = iterate(iter.R)
-    iterR === nothing && return nothing
-    I, state = iterR
-    return getindices(iter, I), state
-end
-function Base.iterate(iter::TileIterator, state)
-    iterR = iterate(iter.R, state)
-    iterR === nothing && return nothing
-    I, newstate = iterR
-    return getindices(iter, I), newstate
-end
-
-Base.show(io::IO, iter::TileIterator) = print(io, "TileIterator(", iter.inds, ", ", iter.sz, ')')
-
-@inline function getindices(iter::TileIterator, I::CartesianIndex)
-    map3(_getindices, iter.inds, iter.sz, I.I)
-end
-_getindices(ind, s, i) = first(ind)+(i-1)*s : min(last(ind),first(ind)+i*s-1)
-map3(f, ::Tuple{}, ::Tuple{}, ::Tuple{}) = ()
-@inline map3(f, a::Tuple, b::Tuple, c::Tuple) = (f(a[1], b[1], c[1]), map3(f, tail(a), tail(b), tail(c))...)
 
 ### EdgeIterator ###
 
