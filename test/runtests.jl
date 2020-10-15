@@ -1,34 +1,23 @@
 using TiledIteration, OffsetArrays
 using Test
+using Documenter
 
-@testset "TileIterator small examples" begin
-    titr = @inferred TileIterator((1:10,), (3,))
-    @test collect(titr) == [(1:3,), (4:6,), (7:9,), (10:10,)]
+@testset "doctests" begin
+    Documenter.doctest(TiledIteration)
+end
 
-    titr = @inferred TileIterator((1:10,), tilesize=(3,), stride=Balanced())
-    @test collect(titr) == [(1:3,), (3:5,), (6:8,), (8:10,)]
+@testset "tileiterator small examples" begin
+    titr = @inferred tileiterator((1:10,), RelaxLastTile((3,)))
+    @test titr == [(1:3,), (4:6,), (7:9,), (10:10,)]
 
-    titr = @inferred TileIterator((1:9,), tilesize=(3,), stride=Balanced((4,)))
-    @test collect(titr) == [(1:3,), (4:6,), (7:9,)]
+    titr = @inferred tileiterator((1:10,), RelaxStride((3,)))
+    @test titr == [(1:3,), (3:5,), (6:8,), (8:10,)]
 
-    titr = @inferred TileIterator((1:9,), tilesize=(3,), stride=Fixed((4,)))
-    @test collect(titr) == [(1:3,), (5:7,), (9:9,)]
+    titr = @inferred tileiterator((1:4,), RelaxStride((2,)))
+    @test titr == [(1:2,), (3:4,)]
 
-    titr = @inferred TileIterator((1:4,), tilesize=(2,), stride=Balanced())
-    @test collect(titr) == [(1:2,), (3:4,)]
-
-    titr = @inferred TileIterator((1:4,), tilesize=(2,))
-    @test collect(titr) == [(1:2,), (3:4,)]
-
-    titr = TileIterator((1:7,), tilesize=(2,), stride=Fixed((3,)))
-    @test collect(titr) == [(1:2,), (4:5,), (7:7,)]
-
-    titr = TileIterator((1:7,), tilesize=(2,), stride=(4,))
-    @test collect(titr) == [(1:2,), (5:6,)]
-
-    titr = TileIterator((1:3,), tilesize=(2,), stride=Fixed((1,)))
-    @test collect(titr) == [(1:2,), (2:3,)]
-
+    titr = @inferred tileiterator((1:4,), RelaxLastTile((2,)))
+    @test titr == [(1:2,), (3:4,)]
 end
 
 @testset "tiled iteration" begin
@@ -45,7 +34,7 @@ end
                 A[tileinds...] .= (k+=1)
             end
             @test minimum(A) == 1
-            @test eltype(collect(TileIterator(inds, sz))) == Tuple{UnitRange{Int}, UnitRange{Int}}
+            @test eltype(TileIterator(inds, sz)) == Tuple{UnitRange{Int}, UnitRange{Int}}
         end
     end
 end

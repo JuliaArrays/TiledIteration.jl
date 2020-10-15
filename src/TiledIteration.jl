@@ -11,7 +11,7 @@ else
     _inc(state, iter) = inc(state, iter.indices)
 end
 
-export TileIterator, EdgeIterator, padded_tilesize, TileBuffer
+export TileIterator, EdgeIterator, padded_tilesize, TileBuffer, tileiterator, RelaxStride, RelaxLastTileSize
 
 include("tileiterator.jl")
 

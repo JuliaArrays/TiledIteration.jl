@@ -33,20 +33,23 @@ Base.@propagate_inbounds function Base.getindex(o::CoveredRange, inds...)
 end
 
 ################################################################################
-##### QuantizedRange
+##### RoundedRange
 ################################################################################
-struct QuantizedRange{R} <: AbstractVector{Int}
+struct RoundedRange{R} <: AbstractVector{Int}
     range::R
 end
 
-Base.@propagate_inbounds function Base.getindex(r::QuantizedRange, i)
+Base.@propagate_inbounds function Base.getindex(r::RoundedRange, i)
     rough = r.range[i]
     return round(Int, rough)
 end
 
-quantizedrange(args...; kw...) = QuantizedRange(range(args...; kw...))
+function roundedrange(start; stop, length)
+    inner = LinRange(start, stop, length)
+    return RoundedRange(inner)
+end
 
-Base.size(o::QuantizedRange, args...) = size(o.range, args...)
+Base.size(o::RoundedRange, args...) = size(o.range, args...)
 
 ################################################################################
 ##### TileIterator
@@ -55,79 +58,96 @@ struct TileIterator{N,C} <: AbstractArray{NTuple{N, UnitRange{Int}}, N}
     covers1d::C
 end
 
-export Fixed
-struct Fixed{V}
-    value::V
-end
-Fixed() = Fixed(nothing)
-Fixed(o::Fixed) = o
-
-export Balanced
-struct Balanced{V}
-    value::V
-end
-Balanced() = Balanced(nothing)
-Balanced(o::Balanced) = o
-
 function TileIterator(covers1d::NTuple{N, AbstractVector{UnitRange{Int}}}) where {N}
     C = typeof(covers1d)
     return TileIterator{N, C}(covers1d)
 end
 
-function compute_stoppings(axes, tilesize::Dims, stride::Balanced)
-    map(FixedLength, tilesize)
-end
-
-function compute_stoppings(axes, tilesize::Dims, stride::Fixed)
-    map(axes, tilesize) do ax, maxlen
-        maxstop = last(ax)
-        LengthAtMost(maxlen, maxstop)
-    end
-end
-
-function compute_offsetss(axes, tilesize::Dims, stride::Fixed)
-    map(axes, tilesize, stride.value) do ax, tilelen, step
-        lo = first(ax)
-        hi = last(ax)
-        stepcount = if tilelen <= step
-            floor(Int, (hi - lo) / step) + 1
-        else
-            ceil(Int, (hi + 1 - lo - tilelen) / step) + 1
-        end
-        firstoffset = lo - 1
-        range(firstoffset, step=step, length=stepcount)
-    end
-end
-
-function compute_offsetss(axes, tilesize::Dims, stride::Balanced)
-    map(axes, tilesize, stride.value) do ax, tilelen, s
-        firstoffset = first(ax)-1
-        lastoffset = last(ax) - tilelen
-        stepcount = ceil(Int, (lastoffset - firstoffset) / s) + 1
-        r = quantizedrange(firstoffset, stop=lastoffset, length=stepcount)
-        @assert last(ax) - tilelen <= last(r) <= last(ax)
-        r
-    end
-end
-
 function TileIterator(axes::Indices{N}, tilesize::Dims{N}) where {N}
-    TileIterator(axes,tilesize=tilesize)::TileIterator{N}
+    tileiterator(axes, RelaxLastTile(tilesize))::TileIterator{N}
 end
 
-resolve_stride(tilesize::Dims, stride::Nothing) = Fixed(tilesize)
-resolve_stride(tilesize::Dims, stride::Balanced{Nothing}) = Balanced(tilesize)
-resolve_stride(tilesize::Dims, stride::Fixed{Nothing}) = Fixed(tilesize)
-resolve_stride(tilesize::Dims, stride::Union{Fixed, Balanced}) = stride
-resolve_stride(tilesize::Dims, stride::Dims) = Fixed(stride)
+# strategies
+export RelaxStride
+struct RelaxStride{N}
+    tilesize::Dims{N}
+end
 
-function TileIterator(axes::Indices; tilesize, stride=nothing)
-    stride = resolve_stride(tilesize, stride)
-    offsetss = compute_offsetss(axes, tilesize, stride)
-    stoppings = compute_stoppings(axes, tilesize, stride)
-    covers1d = map(offsetss, stoppings) do offsets, stopping
-        CoveredRange(offsets, stopping)
+export RelaxLastTile
+struct RelaxLastTile{N}
+    tilesize::Dims{N}
+end
+
+"""
+    split(strategy)
+
+Split an N dimensional strategy into an NTuple of 1 dimensional strategies.
+"""
+function split end
+
+function split(strategy::RelaxStride)
+    map(strategy.tilesize) do s
+        RelaxStride((s,))
     end
+end
+
+function split(strategy::RelaxLastTile)
+    map(strategy.tilesize) do s
+        RelaxLastTile((s,))
+    end
+end
+
+"""
+    titr = tileiterator(axes::NTuple{N, AbstractUnitRange}, strategy)
+
+Decompose `axes` into an iterator `titr` of smaller axes.
+
+```jldoctest
+julia> using TiledIteration
+
+julia> collect(tileiterator((1:3, 0:5), RelaxLastTile((2, 3))))
+2×2 Array{Tuple{UnitRange{Int64},UnitRange{Int64}},2}:
+ (1:2, 0:2)  (1:2, 3:5)
+ (3:3, 0:2)  (3:3, 3:5)
+
+julia> collect(tileiterator((1:3, 0:5), RelaxStride((2, 3))))
+2×2 Array{Tuple{UnitRange{Int64},UnitRange{Int64}},2}:
+ (1:2, 0:2)  (1:2, 3:5)
+ (2:3, 0:2)  (2:3, 3:5)
+```
+"""
+function tileiterator(axes, strategy)
+    covers1d = map(cover1d, axes, split(strategy))
     return TileIterator(covers1d)
+end
+
+function cover1d(ax, strategy::RelaxStride{1})::CoveredRange
+    tilelen = stride = first(strategy.tilesize)
+    firstoffset = first(ax)-1
+    lastoffset = last(ax) - tilelen
+    stepcount = ceil(Int, (lastoffset - firstoffset) / stride) + 1
+    offsets = roundedrange(firstoffset, stop=lastoffset, length=stepcount)
+    @assert last(ax) - tilelen <= last(offsets) <= last(ax)
+
+    stopping = FixedLength(tilelen)
+    return CoveredRange(offsets, stopping)
+end
+
+function cover1d(ax, strategy::RelaxLastTile{1})::CoveredRange
+    tilelen = stride = first(strategy.tilesize)
+    maxstop = last(ax)
+    stopping = LengthAtMost(tilelen, maxstop)
+
+    lo = first(ax)
+    hi = last(ax)
+    stepcount = if tilelen <= stride
+        floor(Int, (hi - lo) / stride) + 1
+    else
+        ceil(Int, (hi + 1 - lo - tilelen) / stride) + 1
+    end
+    firstoffset = lo - 1
+    offsets = range(firstoffset, step=tilelen, length=stepcount)
+    return CoveredRange(offsets, stopping)
 end
 
 Base.@propagate_inbounds function Base.getindex(o::TileIterator, inds...)
