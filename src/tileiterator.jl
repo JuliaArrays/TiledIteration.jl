@@ -69,11 +69,60 @@ end
 
 # strategies
 export RelaxStride
+"""
+    RelaxStride(tilesize)
+
+Tiling strategy, that guarantees each tile of size `tilesize`.
+If the needed tiles will slightly overlap, to cover everything.
+
+# Examples
+```jldoctest
+julia> using TiledIteration
+
+julia> collect(tileiterator((1:4,), RelaxStride((2,))))
+2-element Array{Tuple{UnitRange{Int64}},1}:
+ (1:2,)
+ (3:4,)
+
+julia> collect(tileiterator((1:4,), RelaxStride((3,))))
+2-element Array{Tuple{UnitRange{Int64}},1}:
+ (1:3,)
+ (2:4,)
+```
+
+See also [`tileiterator`](@ref).
+"""
 struct RelaxStride{N}
     tilesize::Dims{N}
 end
 
 export RelaxLastTile
+
+"""
+    RelaxLastTile(tilesize)
+
+Tiling strategy, that premits the size of the last tiles along each dimension to be smaller
+then `tilesize` if needed. All other tiles are of size `tilesize`.
+
+# Examples
+```jldoctest
+julia> using TiledIteration
+
+julia> collect(tileiterator((1:4,), RelaxLastTile((2,))))
+2-element Array{Tuple{UnitRange{Int64}},1}:
+ (1:2,)
+ (3:4,)
+
+julia> collect(tileiterator((1:7,), RelaxLastTile((2,))))
+4-element Array{Tuple{UnitRange{Int64}},1}:
+ (1:2,)
+ (3:4,)
+ (5:6,)
+ (7:7,)
+```
+
+See also [`tileiterator`](@ref).
+"""
 struct RelaxLastTile{N}
     tilesize::Dims{N}
 end
