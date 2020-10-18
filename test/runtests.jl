@@ -2,9 +2,20 @@ using TiledIteration, OffsetArrays
 using Test
 using Documenter
 
-@testset "doctests" begin
+if VERSION <= v"1.5"
     Documenter.doctest(TiledIteration)
+    # Version restriction can be lifted, when
+    # filters can be passed to `doctest`
+    # See https://github.com/JuliaDocs/Documenter.jl/pull/1435
+    #
+    # doctestfilters = [
+    #     r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
+    #     r"(Array{[a-zA-Z0-9]+,\s?1}|Vector{[a-zA-Z0-9]+})",
+    #     r"(Array{[a-zA-Z0-9]+,\s?2}|Matrix{[a-zA-Z0-9]+})",
+    # ]
+    # Documenter.doctest(TiledIteration, doctestfilters = doctestfilters)
 end
+
 
 @testset "tileiterator small examples" begin
     titr = @inferred tileiterator((1:10,), RelaxLastTile((3,)))
