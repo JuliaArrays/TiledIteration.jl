@@ -47,13 +47,19 @@ end
         titr = @inferred TileIterator(axes(AO), RelaxStride((5, )))
         @test titr == [(0:4,), (5:9,)]
 
-        titr = @inferred TileIterator((Base.IdentityUnitRange(-4:0),), RelaxLastTile((2,)))
+        IdentityUnitRange = if isdefined(Base, :IdentityUnitRange)
+            Base.IdentityUnitRange
+        else
+            identity
+        end
+
+        titr = @inferred TileIterator((IdentityUnitRange(-4:0),), RelaxLastTile((2,)))
         @test titr == [(-4:-3,), (-2:-1,), (0:0,)]
 
-        titr = TileIterator((Base.OneTo(4), Base.IdentityUnitRange(0:3)), RelaxStride((3,2)))
+        titr = TileIterator((Base.OneTo(4), IdentityUnitRange(0:3)), RelaxStride((3,2)))
         @test titr == [(1:3, 0:1) (1:3, 2:3); (2:4, 0:1) (2:4, 2:3)]
 
-        titr = TileIterator((Base.OneTo(4), Base.IdentityUnitRange(0:3), 2:2), RelaxStride((3,2,1)))
+        titr = TileIterator((Base.OneTo(4), IdentityUnitRange(0:3), 2:2), RelaxStride((3,2,1)))
         @test axes(titr) == (1:2,1:2,1:1)
         @test titr[1,1,1] === (1:3, 0:1, 2:2)
         @test titr[1,2,1] === (1:3, 2:3, 2:2)
