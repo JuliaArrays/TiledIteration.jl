@@ -2,7 +2,7 @@ using TiledIteration, OffsetArrays
 using Test
 using Documenter
 
-if VERSION <= v"1.5"
+if VERSION < v"1.6-"
     Documenter.doctest(TiledIteration)
     # Version restriction can be lifted, when
     # filters can be passed to `doctest`
@@ -17,17 +17,17 @@ if VERSION <= v"1.5"
 end
 
 
-@testset "tileiterator small examples" begin
-    titr = @inferred tileiterator((1:10,), RelaxLastTile((3,)))
+@testset "TileIterator small examples" begin
+    titr = @inferred TileIterator((1:10,), RelaxLastTile((3,)))
     @test titr == [(1:3,), (4:6,), (7:9,), (10:10,)]
 
-    titr = @inferred tileiterator((1:10,), RelaxStride((3,)))
+    titr = @inferred TileIterator((1:10,), RelaxStride((3,)))
     @test titr == [(1:3,), (3:5,), (6:8,), (8:10,)]
 
-    titr = @inferred tileiterator((1:4,), RelaxStride((2,)))
+    titr = @inferred TileIterator((1:4,), RelaxStride((2,)))
     @test titr == [(1:2,), (3:4,)]
 
-    titr = @inferred tileiterator((1:4,), RelaxLastTile((2,)))
+    titr = @inferred TileIterator((1:4,), RelaxLastTile((2,)))
     @test titr == [(1:2,), (3:4,)]
 end
 

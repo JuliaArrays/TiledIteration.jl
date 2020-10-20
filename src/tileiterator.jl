@@ -64,7 +64,31 @@ function TileIterator(covers1d::NTuple{N, AbstractVector{UnitRange{Int}}}) where
 end
 
 function TileIterator(axes::Indices{N}, tilesize::Dims{N}) where {N}
-    tileiterator(axes, RelaxLastTile(tilesize))::TileIterator{N}
+    TileIterator(axes, RelaxLastTile(tilesize))::TileIterator{N}
+end
+
+"""
+    titr = TileIterator(axes::NTuple{N, AbstractUnitRange}, strategy)
+
+Decompose `axes` into an iterator `titr` of smaller axes.
+
+```jldoctest
+julia> using TiledIteration
+
+julia> collect(TileIterator((1:3, 0:5), RelaxLastTile((2, 3))))
+2×2 Array{Tuple{UnitRange{Int64},UnitRange{Int64}},2}:
+ (1:2, 0:2)  (1:2, 3:5)
+ (3:3, 0:2)  (3:3, 3:5)
+
+julia> collect(TileIterator((1:3, 0:5), RelaxStride((2, 3))))
+2×2 Array{Tuple{UnitRange{Int64},UnitRange{Int64}},2}:
+ (1:2, 0:2)  (1:2, 3:5)
+ (2:3, 0:2)  (2:3, 3:5)
+```
+"""
+function TileIterator(axes, strategy)
+    covers1d = map(cover1d, axes, split(strategy))
+    return TileIterator(covers1d)
 end
 
 # strategies
@@ -79,18 +103,18 @@ If the needed tiles will slightly overlap, to cover everything.
 ```jldoctest
 julia> using TiledIteration
 
-julia> collect(tileiterator((1:4,), RelaxStride((2,))))
+julia> collect(TileIterator((1:4,), RelaxStride((2,))))
 2-element Array{Tuple{UnitRange{Int64}},1}:
  (1:2,)
  (3:4,)
 
-julia> collect(tileiterator((1:4,), RelaxStride((3,))))
+julia> collect(TileIterator((1:4,), RelaxStride((3,))))
 2-element Array{Tuple{UnitRange{Int64}},1}:
  (1:3,)
  (2:4,)
 ```
 
-See also [`tileiterator`](@ref).
+See also [`TileIterator`](@ref).
 """
 struct RelaxStride{N}
     tilesize::Dims{N}
@@ -108,12 +132,12 @@ then `tilesize` if needed. All other tiles are of size `tilesize`.
 ```jldoctest
 julia> using TiledIteration
 
-julia> collect(tileiterator((1:4,), RelaxLastTile((2,))))
+julia> collect(TileIterator((1:4,), RelaxLastTile((2,))))
 2-element Array{Tuple{UnitRange{Int64}},1}:
  (1:2,)
  (3:4,)
 
-julia> collect(tileiterator((1:7,), RelaxLastTile((2,))))
+julia> collect(TileIterator((1:7,), RelaxLastTile((2,))))
 4-element Array{Tuple{UnitRange{Int64}},1}:
  (1:2,)
  (3:4,)
@@ -121,7 +145,7 @@ julia> collect(tileiterator((1:7,), RelaxLastTile((2,))))
  (7:7,)
 ```
 
-See also [`tileiterator`](@ref).
+See also [`TileIterator`](@ref).
 """
 struct RelaxLastTile{N}
     tilesize::Dims{N}
@@ -144,30 +168,6 @@ function split(strategy::RelaxLastTile)
     map(strategy.tilesize) do s
         RelaxLastTile((s,))
     end
-end
-
-"""
-    titr = tileiterator(axes::NTuple{N, AbstractUnitRange}, strategy)
-
-Decompose `axes` into an iterator `titr` of smaller axes.
-
-```jldoctest
-julia> using TiledIteration
-
-julia> collect(tileiterator((1:3, 0:5), RelaxLastTile((2, 3))))
-2×2 Array{Tuple{UnitRange{Int64},UnitRange{Int64}},2}:
- (1:2, 0:2)  (1:2, 3:5)
- (3:3, 0:2)  (3:3, 3:5)
-
-julia> collect(tileiterator((1:3, 0:5), RelaxStride((2, 3))))
-2×2 Array{Tuple{UnitRange{Int64},UnitRange{Int64}},2}:
- (1:2, 0:2)  (1:2, 3:5)
- (2:3, 0:2)  (2:3, 3:5)
-```
-"""
-function tileiterator(axes, strategy)
-    covers1d = map(cover1d, axes, split(strategy))
-    return TileIterator(covers1d)
 end
 
 function cover1d(ax, strategy::RelaxStride{1})::CoveredRange
