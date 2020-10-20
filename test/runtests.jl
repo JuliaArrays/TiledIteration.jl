@@ -59,6 +59,8 @@ end
         @test titr[1,2,1] === (1:3, 2:3, 2:2)
         @test titr[2,1,1] === (2:4, 0:1, 2:2)
         @test titr[2,2,1] === (2:4, 2:3, 2:2)
+        @test titr[1,1,1:1] == [titr[1,1,1]]
+        @test titr[:,1:2,1:1] == titr
     end
 
 end

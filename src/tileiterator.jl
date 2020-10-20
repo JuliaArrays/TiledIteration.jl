@@ -212,7 +212,7 @@ function cover1d(ax, strategy::RelaxLastTile{1})::CoveredRange
     return CoveredRange(offsets, stopping)
 end
 
-Base.@propagate_inbounds function Base.getindex(o::TileIterator, inds...)
+Base.@propagate_inbounds function Base.getindex(o::TileIterator, inds::Integer...)
     cis = CartesianIndices(o)[inds...]
     o[cis]
 end
