@@ -137,7 +137,7 @@ export RelaxLastTile
 """
     RelaxLastTile(tilesize)
 
-Tiling strategy, that premits the size of the last tiles along each dimension to be smaller
+Tiling strategy, that permits the size of the last tiles along each dimension to be smaller
 than `tilesize` if needed. All other tiles are of size `tilesize`.
 
 # Examples
