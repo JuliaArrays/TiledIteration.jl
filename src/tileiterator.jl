@@ -12,9 +12,9 @@ struct FixedLength
     length::Int
 end
 
-struct LengthAtMost{N <: Union{Int, Nothing}}
+struct LengthAtMost
     maxlength::Int
-    maxstop::N
+    maxstop::Int
 end
 
 function compute_stop(offset, stopping::FixedLength)
