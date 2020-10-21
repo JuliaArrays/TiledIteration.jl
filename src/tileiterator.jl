@@ -132,7 +132,6 @@ struct RelaxStride{N}
     tilesize::Dims{N}
 end
 
-export RelaxLastTile
 
 """
     RelaxLastTile(tilesize)
