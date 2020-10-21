@@ -138,7 +138,7 @@ export RelaxLastTile
     RelaxLastTile(tilesize)
 
 Tiling strategy, that premits the size of the last tiles along each dimension to be smaller
-then `tilesize` if needed. All other tiles are of size `tilesize`.
+than `tilesize` if needed. All other tiles are of size `tilesize`.
 
 # Examples
 ```jldoctest
