@@ -105,7 +105,6 @@ function TileIterator(axes, strategy)
 end
 
 # strategies
-export RelaxStride
 """
     RelaxStride(tilesize)
 
