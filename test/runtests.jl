@@ -1,6 +1,7 @@
 using TiledIteration, OffsetArrays
 using Test
 using Documenter
+using OffsetArrays: IdentityUnitRange
 
 if VERSION < v"1.6-"
     Documenter.doctest(TiledIteration)
@@ -46,12 +47,6 @@ end
         @test titr == [(0:2,), (3:5,), (6:8,), (9:9,)]
         titr = @inferred TileIterator(axes(AO), RelaxStride((5, )))
         @test titr == [(0:4,), (5:9,)]
-
-        IdentityUnitRange = if isdefined(Base, :IdentityUnitRange)
-            Base.IdentityUnitRange
-        else
-            identity
-        end
 
         titr = @inferred TileIterator((IdentityUnitRange(-4:0),), RelaxLastTile((2,)))
         @test titr == [(-4:-3,), (-2:-1,), (0:0,)]
