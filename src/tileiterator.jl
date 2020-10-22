@@ -181,7 +181,7 @@ function split(strategy::RelaxLastTile)
     end
 end
 
-function cover1d(ax, strategy::RelaxStride{1})::CoveredRange
+function cover1d(ax, strategy::RelaxStride{1})
     tilelen = stride = first(strategy.tilesize)
     firstoffset = first(ax)-1
     lastoffset = last(ax) - tilelen
@@ -193,7 +193,7 @@ function cover1d(ax, strategy::RelaxStride{1})::CoveredRange
     return CoveredRange(offsets, stopping)
 end
 
-function cover1d(ax, strategy::RelaxLastTile{1})::CoveredRange
+function cover1d(ax, strategy::RelaxLastTile{1})
     tilelen = stride = first(strategy.tilesize)
     maxstop = last(ax)
     stopping = LengthAtMost(tilelen, maxstop)
