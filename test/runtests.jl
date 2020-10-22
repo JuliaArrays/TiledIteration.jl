@@ -1,5 +1,70 @@
 using TiledIteration, OffsetArrays
 using Test
+using Documenter
+using OffsetArrays: IdentityUnitRange
+
+if VERSION < v"1.6-"
+    Documenter.doctest(TiledIteration)
+    # Version restriction can be lifted, when
+    # filters can be passed to `doctest`
+    # See https://github.com/JuliaDocs/Documenter.jl/pull/1435
+    #
+    # doctestfilters = [
+    #     r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
+    #     r"(Array{[a-zA-Z0-9]+,\s?1}|Vector{[a-zA-Z0-9]+})",
+    #     r"(Array{[a-zA-Z0-9]+,\s?2}|Matrix{[a-zA-Z0-9]+})",
+    # ]
+    # Documenter.doctest(TiledIteration, doctestfilters = doctestfilters)
+end
+
+
+@testset "TileIterator small examples" begin
+    titr = @inferred TileIterator((1:10,), RelaxLastTile((3,)))
+    @test titr == [(1:3,), (4:6,), (7:9,), (10:10,)]
+
+    titr = @inferred TileIterator((1:10,), RelaxStride((3,)))
+    @test titr == [(1:3,), (3:5,), (6:8,), (8:10,)]
+
+    titr = @inferred TileIterator((1:4,), RelaxStride((2,)))
+    @test titr == [(1:2,), (3:4,)]
+
+    titr = @inferred TileIterator((1:4,), RelaxLastTile((2,)))
+    @test titr == [(1:2,), (3:4,)]
+
+    titr = @inferred TileIterator((1:3, 0:5), RelaxLastTile((2, 3)))
+    @test titr == [(1:2, 0:2) (1:2, 3:5); (3:3, 0:2)  (3:3, 3:5)]
+
+    titr = @inferred TileIterator((1:3, 0:5), (2, 3))
+    @test titr == [(1:2, 0:2)  (1:2, 3:5); (3:3, 0:2)  (3:3, 3:5)]
+
+    titr = @inferred TileIterator((1:3, 0:5), RelaxStride((2, 3)))
+    @test titr == [(1:2, 0:2)  (1:2, 3:5); (2:3, 0:2)  (2:3, 3:5)]
+
+    @testset "Exotic ranges" begin
+        A = zeros(10)
+        AO = OffsetArray(A, OffsetArrays.Origin(0))
+        titr = @inferred TileIterator(axes(AO), RelaxLastTile((3, )))
+        @test titr == [(0:2,), (3:5,), (6:8,), (9:9,)]
+        titr = @inferred TileIterator(axes(AO), RelaxStride((5, )))
+        @test titr == [(0:4,), (5:9,)]
+
+        titr = @inferred TileIterator((IdentityUnitRange(-4:0),), RelaxLastTile((2,)))
+        @test titr == [(-4:-3,), (-2:-1,), (0:0,)]
+
+        titr = TileIterator((Base.OneTo(4), IdentityUnitRange(0:3)), RelaxStride((3,2)))
+        @test titr == [(1:3, 0:1) (1:3, 2:3); (2:4, 0:1) (2:4, 2:3)]
+
+        titr = TileIterator((Base.OneTo(4), IdentityUnitRange(0:3), 2:2), RelaxStride((3,2,1)))
+        @test axes(titr) == (1:2,1:2,1:1)
+        @test titr[1,1,1] === (1:3, 0:1, 2:2)
+        @test titr[1,2,1] === (1:3, 2:3, 2:2)
+        @test titr[2,1,1] === (2:4, 0:1, 2:2)
+        @test titr[2,2,1] === (2:4, 2:3, 2:2)
+        @test titr[1,1,1:1] == [titr[1,1,1]]
+        @test titr[:,1:2,1:1] == titr
+    end
+
+end
 
 @testset "tiled iteration" begin
     sz = (3,5)
@@ -15,7 +80,7 @@ using Test
                 A[tileinds...] .= (k+=1)
             end
             @test minimum(A) == 1
-            @test eltype(collect(TileIterator(inds, sz))) == Tuple{UnitRange{Int}, UnitRange{Int}}
+            @test eltype(TileIterator(inds, sz)) == Tuple{UnitRange{Int}, UnitRange{Int}}
         end
     end
 end

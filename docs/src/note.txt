@@ -1,0 +1,1 @@
+Documenter needs this directory to exist. Otherwise it refuses to run doctests.
