@@ -10,10 +10,11 @@ end
 """
     TileIndices(indices, sz, Δ=sz; keep_last=true)
 
-Construct a sliding tile along axes `r` with fixed sliding strides `Δ` and tile size `sz`.
+Construct a sliding tile along axes `indices` with fixed sliding strides `Δ` and tile size `sz`.
 
 # Arguments
 
+- `indices`: tuple of ranges, or `CartesianIndices`.
 - `sz`: The size of each tile. If keyword `keep_last=true`, the last tile size might be smaller than
   `sz`.
 - `Δ=sz`: For each dimension `i` and `r = indices[i]`, the sliding stride `Δ[i]` is defined as
@@ -24,27 +25,27 @@ Construct a sliding tile along axes `r` with fixed sliding strides `Δ` and tile
 
 # Examples
 
-```jldoctest
+```jldoctest; setup=:(using TiledIteration)
 julia> TileIndices((1:4, 0:5), (3, 4), (2, 3))
- 2×2 TileIndices{Tuple{UnitRange{Int64}, UnitRange{Int64}}, 2, FixedTileRange{UnitRange{Int64}, Int64, Val{true}, UnitRange{Int64}}}:
-  (1:3, 0:3)  (1:3, 3:5)
-  (3:4, 0:3)  (3:4, 3:5)
+2×2 TileIndices{Tuple{UnitRange{$Int},UnitRange{$Int}},2,FixedTileRange{UnitRange{$Int},$Int,UnitRange{$Int}}}:
+ (1:3, 0:3)  (1:3, 3:5)
+ (3:4, 0:3)  (3:4, 3:5)
 
 julia> TileIndices((1:4, 0:5), (3, 4), (2, 3); keep_last=false)
-1×1 TileIndices{Tuple{UnitRange{Int64}, UnitRange{Int64}}, 2, FixedTileRange{UnitRange{Int64}, Int64, Val{false}, UnitRange{Int64}}}:
+1×1 TileIndices{Tuple{UnitRange{$Int},UnitRange{$Int}},2,FixedTileRange{UnitRange{$Int},$Int,UnitRange{$Int}}}:
  (1:3, 0:3)
 ```
 
 When `sz` and `Δ` are scalars, it affects each dimension equivalently.
 
-```jldoctest
+```jldoctest; setup=:(using TiledIteration)
 julia> TileIndices((1:4, 0:5), 3, 2)
-2×3 TileIndices{Tuple{UnitRange{Int64}, UnitRange{Int64}}, 2, FixedTileRange{UnitRange{Int64}, Int64, Val{true}, UnitRange{Int64}}}:
+2×3 TileIndices{Tuple{UnitRange{$Int},UnitRange{$Int}},2,FixedTileRange{UnitRange{$Int},$Int,UnitRange{$Int}}}:
  (1:3, 0:2)  (1:3, 2:4)  (1:3, 4:5)
  (3:4, 0:2)  (3:4, 2:4)  (3:4, 4:5)
 
 julia> TileIndices((1:4, 0:5), 3, 2; keep_last=false)
-1×2 TileIndices{Tuple{UnitRange{Int64}, UnitRange{Int64}}, 2, FixedTileRange{UnitRange{Int64}, Int64, Val{false}, UnitRange{Int64}}}:
+1×2 TileIndices{Tuple{UnitRange{$Int},UnitRange{$Int}},2,FixedTileRange{UnitRange{$Int},$Int,UnitRange{$Int}}}:
  (1:3, 0:2)  (1:3, 2:4)
 ```
 
@@ -57,7 +58,9 @@ TileIndices(indices, n, Δ=n; kwargs...) = TileIndices(indices, FixedTile(n, Δ;
 """
     TileIndices(indices, s::AbstractTileStrategy)
 
-Construct a sliding tile along axes `r` using provided tile strategy `s`.
+Construct a sliding tile along axes `indices` using provided tile strategy `s`.
+
+`indices` are tuple of ranges, or `CartesianIndices`.
 
 Currently available strategies are:
 

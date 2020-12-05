@@ -44,41 +44,41 @@ Construct a sliding tile along range `r` with fixed sliding stride `Δ` and tile
 
 # Examples
 
-```jldoctest
+```jldoctest; setup=:(using TiledIteration)
 julia> FixedTileRange(2:10, 3)
-3-element FixedTileRange{UnitRange{Int64}, Int64, Val{true}, UnitRange{Int64}}:
+3-element FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}:
  2:4
  5:7
  8:10
 
 julia> FixedTileRange(1:10, 4)
-3-element FixedTileRange{UnitRange{Int64}, Int64, Val{true}, UnitRange{Int64}}:
+3-element FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}:
  1:4
  5:8
  9:10
 
 julia> FixedTileRange(1:10, 4, 2)
- 4-element FixedTileRange{UnitRange{Int64}, Int64, Val{true}, UnitRange{Int64}}:
-  1:4
-  3:6
-  5:8
-  7:10
+4-element FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}:
+ 1:4
+ 3:6
+ 5:8
+ 7:10
 
 julia> FixedTileRange(1:10, 4; keep_last=false)
- 2-element FixedTileRange{UnitRange{Int64}, Int64, Val{false}, UnitRange{Int64}}:
-  1:4
-  5:8
+2-element FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}:
+ 1:4
+ 5:8
 ```
 
 Besides an `AbstractUnitRange`, the input range `r` can also be a `CartesianIndices{1}` or more
 generally, an `AbstractVector{<:Integer}`:
 
-```jldoctest
+```jldoctest; setup=:(using TiledIteration)
 julia> FixedTileRange(CartesianIndices((1:10, )), 4)
- 3-element FixedTileRange{CartesianIndices{1, Tuple{UnitRange{Int64}}}, Int64, Val{true}, CartesianIndices{1, Tuple{UnitRange{Int64}}}}:
-  [CartesianIndex(1,), CartesianIndex(2,), CartesianIndex(3,), CartesianIndex(4,)]
-  [CartesianIndex(5,), CartesianIndex(6,), CartesianIndex(7,), CartesianIndex(8,)]
-  [CartesianIndex(9,), CartesianIndex(10,)]
+3-element FixedTileRange{CartesianIndices{1,Tuple{UnitRange{Int64}}},Int64,CartesianIndices{1,Tuple{UnitRange{Int64}}}}:
+ [CartesianIndex(1,), CartesianIndex(2,), CartesianIndex(3,), CartesianIndex(4,)]
+ [CartesianIndex(5,), CartesianIndex(6,), CartesianIndex(7,), CartesianIndex(8,)]
+ [CartesianIndex(9,), CartesianIndex(10,)]
 ```
 
 !!! warning It usually has bad indexing performance if `r` is not lazily evaluated. For example,
@@ -150,27 +150,27 @@ A tile strategy that you can use to construct [`TileIndices`](@ref) using [`Fixe
 
 # Examples
 
-```jldoctest
+```jldoctest; setup=:(using TiledIteration)
 julia> TileIndices((1:4, 0:5), FixedTile((3, 4), (2, 3)))
- 2×2 TileIndices{Tuple{UnitRange{Int64}, UnitRange{Int64}}, 2, FixedTileRange{UnitRange{Int64}, Int64, Val{true}, UnitRange{Int64}}}:
-  (1:3, 0:3)  (1:3, 3:5)
-  (3:4, 0:3)  (3:4, 3:5)
+2×2 TileIndices{Tuple{UnitRange{Int64},UnitRange{Int64}},2,FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}}:
+ (1:3, 0:3)  (1:3, 3:5)
+ (3:4, 0:3)  (3:4, 3:5)
 
 julia> TileIndices((1:4, 0:5), FixedTile((3, 4), (2, 3); keep_last=false))
-1×1 TileIndices{Tuple{UnitRange{Int64}, UnitRange{Int64}}, 2, FixedTileRange{UnitRange{Int64}, Int64, Val{false}, UnitRange{Int64}}}:
+1×1 TileIndices{Tuple{UnitRange{Int64},UnitRange{Int64}},2,FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}}:
  (1:3, 0:3)
 ```
 
 When `sz` and `Δ` are scalars, it affects each dimension equivalently.
 
-```jldoctest
+```jldoctest; setup=:(using TiledIteration)
 julia> TileIndices((1:4, 0:5), FixedTile(3, 2))
-2×3 TileIndices{Tuple{UnitRange{Int64}, UnitRange{Int64}}, 2, FixedTileRange{UnitRange{Int64}, Int64, Val{true}, UnitRange{Int64}}}:
+2×3 TileIndices{Tuple{UnitRange{Int64},UnitRange{Int64}},2,FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}}:
  (1:3, 0:2)  (1:3, 2:4)  (1:3, 4:5)
  (3:4, 0:2)  (3:4, 2:4)  (3:4, 4:5)
 
 julia> TileIndices((1:4, 0:5), FixedTile(3, 2; keep_last=false))
-1×2 TileIndices{Tuple{UnitRange{Int64}, UnitRange{Int64}}, 2, FixedTileRange{UnitRange{Int64}, Int64, Val{false}, UnitRange{Int64}}}:
+1×2 TileIndices{Tuple{UnitRange{Int64},UnitRange{Int64}},2,FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}}:
  (1:3, 0:2)  (1:3, 2:4)
 ```
 """
