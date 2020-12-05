@@ -17,6 +17,8 @@ if VERSION < v"1.6-"
     # Documenter.doctest(TiledIteration, doctestfilters = doctestfilters)
 end
 
+include("tilerange.jl")
+include("tileindices.jl")
 
 @testset "TileIterator small examples" begin
     titr = @inferred TileIterator((1:10,), RelaxLastTile((3,)))

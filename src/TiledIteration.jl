@@ -11,10 +11,11 @@ else
     _inc(state, iter) = inc(state, iter.indices)
 end
 
-export TileIterator, TiledUnitRange, TiledIndices, EdgeIterator, padded_tilesize, TileBuffer, RelaxStride, RelaxLastTile
+export TileIterator, FixedTileRange, FixedTile, TileIndices, EdgeIterator, padded_tilesize, TileBuffer, RelaxStride, RelaxLastTile
 
 include("tileiterator.jl")
-include("tile.jl")
+include("tilerange.jl")
+include("tileindices.jl")
 
 const L1cachesize = 2^15
 const cachelinesize = 64
