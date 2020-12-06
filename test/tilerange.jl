@@ -58,6 +58,44 @@
                 @test all(map(x->length(x)==4, r))
             end
 
+            @testset "StepRange" begin
+                r0 = 2:3:20
+
+                # keep the last tile
+                r = @inferred FixedTileRange(r0, 4)
+                @test r == FixedTileRange(r0, 4; keep_last=true) == FixedTileRange(r0, 4, 4)
+                @test r isa AbstractArray
+                @test eltype(r) == StepRange{eltype(r0), eltype(r0)}
+                @test length(r) == 3
+                @test first(r) == 2:3:11
+                @test last(r) == 10:3:19
+                test_iteration(r)
+                @test all(map(x->length(x)==4, r[1:end-1]))
+                @test length(r[end]) <= 4
+
+                # different stride
+                r = @inferred FixedTileRange(r0, 4, 2)
+                @test r == FixedTileRange(r0, 4, 2; keep_last=true)
+                @test r isa AbstractArray
+                @test eltype(r) == StepRange{eltype(r0), eltype(r0)}
+                @test length(r) == 5
+                @test first(r) == 2:3:11
+                @test last(r) == 10:3:19
+                test_iteration(r)
+                @test all(map(x->length(x)==4, r[1:end-1]))
+                @test length(r[end]) <= 4
+
+                # discard the last tile
+                r = @inferred FixedTileRange(r0, 4; keep_last=false)
+                @test r isa AbstractArray
+                @test eltype(r) == StepRange{eltype(r0), eltype(r0)}
+                @test length(r) == 2
+                @test first(r) == 2:3:11
+                @test last(r) == 6:3:15
+                test_iteration(r)
+                @test all(map(x->length(x)==4, r))
+            end
+
             # FixedTileRange only works for 1d case
             @test_throws MethodError FixedTileRange((2:10, 2:10), (4, 4), (2, 2))        
         end
@@ -101,6 +139,48 @@
             @test last(r) == CartesianIndex(6):CartesianIndex(9)
             # test_iteration(r)
             @test all(map(x->length(x)==4, r))
+
+            @testset "StepRange" begin
+            if VERSION >= v"1.6.0-DEV.1174"
+                # StepRange CartesianIndices
+                # https://github.com/JuliaLang/julia/pull/37829
+                r0 = CartesianIndex(2):CartesianIndex(3):CartesianIndex(20)
+
+                # keep the last tile
+                r = @inferred FixedTileRange(r0, 4);
+                @test r == FixedTileRange(r0, 4; keep_last=true) == FixedTileRange(r0, 4, 4)
+                @test r isa AbstractArray
+                @test eltype(r) == CartesianIndices{1, Tuple{StepRange{Int64, Int64}}}
+                @test length(r) == 3
+                @test first(r) == CartesianIndex(2):CartesianIndex(3):CartesianIndex(11)
+                @test last(r) == CartesianIndex(10):CartesianIndex(3):CartesianIndex(19)
+                test_iteration(r)
+                @test all(map(x->length(x)==4, r[1:end-1]))
+                @test length(r[end]) <= 4
+
+                # different stride
+                r = @inferred FixedTileRange(r0, 4, 2);
+                @test r == FixedTileRange(r0, 4, 2; keep_last=true)
+                @test r isa AbstractArray
+                @test eltype(r) == CartesianIndices{1, Tuple{StepRange{Int64, Int64}}}
+                @test length(r) == 5
+                @test first(r) == CartesianIndex(2):CartesianIndex(3):CartesianIndex(11)
+                @test last(r) == CartesianIndex(10):CartesianIndex(3):CartesianIndex(19)
+                test_iteration(r)
+                @test all(map(x->length(x)==4, r[1:end-1]))
+                @test length(r[end]) <= 4
+
+                # discard the last tile
+                r = @inferred FixedTileRange(r0, 4; keep_last=false);
+                @test r isa AbstractArray
+                @test eltype(r) == CartesianIndices{1, Tuple{StepRange{Int64, Int64}}}
+                @test length(r) == 2
+                @test first(r) == CartesianIndex(2):CartesianIndex(3):CartesianIndex(11)
+                @test last(r) == CartesianIndex(6):CartesianIndex(3):CartesianIndex(15)
+                test_iteration(r)
+                @test all(map(x->length(x)==4, r))
+            end
+            end
         end
 
         @testset "AbstractVector" begin
@@ -150,43 +230,76 @@
 
     end # FixedTileRange
 
-
     @testset "FixedTile" begin
         # scalar case
-        s = FixedTile(4, 2)
-        @test s == FixedTile(4, 2; keep_last=true)
-        @test s == FixedTile(4, CartesianIndex(2))
+        @testset "scalar case" begin
+            s = FixedTile(4, 2)
+            @test s == FixedTile(4, 2; keep_last=true)
+            @test s == FixedTile(4, CartesianIndex(2))
 
-        for r0 in ranges
+            for r0 in ranges
+                s = FixedTile(4, 2)
+                R = @inferred s(r0)
+                @test R == FixedTileRange(r0, 4, 2)
+
+                r1 = CartesianIndices((r0, ))
+                @test s(r1) == FixedTileRange(r1, 4, 2)
+            end
+
+            # StepRange
+            r0 = 2:3:20
             s = FixedTile(4, 2)
             R = @inferred s(r0)
-            @test s(r0) == FixedTileRange(r0, 4, 2)
-
-            r1 = CartesianIndices((r0, ))
-            @test s(r1) == FixedTileRange(r1, 4, 2)
+            @test R == FixedTileRange(r0, 4, 2)
+            if VERSION >= v"1.6.0-DEV.1174"
+                # StepRange CartesianIndices
+                # https://github.com/JuliaLang/julia/pull/37829
+                r1 = CartesianIndices((r0, ))
+                R = @inferred s(r1);
+                @test R == FixedTileRange(r1, 4, 2)
+            end
         end
 
         # nd case
-        for r0 in ranges, n in 2:3
+        for n in 2:3
             for (sz, Δ) in [
                     (4, 2),
                     (ntuple(_->4, n), ntuple(_->2, n)),
                     (fill(4, n), fill(2, n)),
                     (ntuple(_->4, n), ntuple(_->CartesianIndex(2), n))
             ]
+                for r0 in ranges
+                    s = FixedTile(sz, Δ)
+                    indices = ntuple(_->r0, n)
+                    R = @inferred s(indices)
+                    @test eltype(R) <: FixedTileRange{<:UnitRange}
+                    @test all(map(==, R, ntuple(_->FixedTileRange(r0, 4, 2), n)))
+
+                    indices = CartesianIndices(indices)
+                    r1 = CartesianIndices((r0, ))
+                    R = @inferred s(indices)
+                    @test eltype(R) <: FixedTileRange{<:CartesianIndices}
+                    @test all(map(==, R, ntuple(_->FixedTileRange(r1, 4, 2), n)))
+                end
+
+                # StepRange
+                r0 = 2:3:20
                 s = FixedTile(sz, Δ)
                 indices = ntuple(_->r0, n)
                 R = @inferred s(indices)
-                @test eltype(R) <: FixedTileRange{<:UnitRange}
+                @test eltype(R) <: FixedTileRange{<:StepRange}
                 @test all(map(==, R, ntuple(_->FixedTileRange(r0, 4, 2), n)))
 
-                indices = CartesianIndices(indices)
-                r1 = CartesianIndices((r0, ))
-                R = @inferred s(indices)
-                @test eltype(R) <: FixedTileRange{<:CartesianIndices}
-                @test all(map(==, R, ntuple(_->FixedTileRange(r1, 4, 2), n)))
+                if VERSION >= v"1.6.0-DEV.1174"
+                    # StepRange CartesianIndices
+                    # https://github.com/JuliaLang/julia/pull/37829
+                    indices = CartesianIndices(indices)
+                    r1 = CartesianIndices((r0, ))
+                    R = @inferred s(indices)
+                    @test eltype(R) <: FixedTileRange{<:CartesianIndices}
+                    @test all(map(==, R, ntuple(_->FixedTileRange(r1, 4, 2), n)))
+                end
             end
         end
-
     end # FixedTile
 end

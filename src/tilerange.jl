@@ -16,13 +16,14 @@
 # | range/vector      |   AbstractTileRange  |
 # | CartesianIndices  |   TileIndices        |
 #
-# AbstractTileStrategy serves as an adapter for `AbstractTileRange` and `TileIndices`
+# AbstractTileStrategy serves as an adapter for `AbstractTileRange` and `TileIndices` to give a more
+# flexible API specification.
 
 
 abstract type AbstractTileRange{R} <: AbstractArray{R, 1} end
 abstract type AbstractTileStrategy end
 
-const Range1 = Union{AbstractUnitRange, AbstractVector}
+const Range1 = Union{OrdinalRange{<:Integer}, AbstractVector{<:Integer}, CartesianIndices{1}}
 
 ### FixedTileRange and FixedTile
 
@@ -68,6 +69,11 @@ julia> FixedTileRange(1:10, 4; keep_last=false)
 2-element FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}:
  1:4
  5:8
+
+julia> FixedTileRange(1:2:10, 4)
+2-element FixedTileRange{StepRange{Int64,Int64},Int64,StepRange{Int64,Int64}}:
+ 1:2:7
+ 5:2:9
 ```
 
 Besides an `AbstractUnitRange`, the input range `r` can also be a `CartesianIndices{1}` or more
@@ -81,7 +87,8 @@ julia> FixedTileRange(CartesianIndices((1:10, )), 4)
  [CartesianIndex(9,), CartesianIndex(10,)]
 ```
 
-!!! warning It usually has bad indexing performance if `r` is not lazily evaluated. For example,
+!!! warning
+    It usually has bad indexing performance if `r` is not lazily evaluated. For example,
     `FixedTileRange(collect(1:10), 4)` creates a new `Vector` of length `4` everytime when
     `getindex` is called.
 """
@@ -95,41 +102,54 @@ struct FixedTileRange{R, T, RP} <: AbstractTileRange{R}
     length::T
 
     function FixedTileRange(parent::R, n::T, Δ; keep_last::Bool=true) where {R<:Range1, T}
-        _length = _fixedtile_length(first(parent), last(parent), n, Δ, keep_last)
+        _length = _fixedtile_length(parent, n, Δ, keep_last)
         new{_eltype(R), T, R}(parent, n, Δ, keep_last, _length)
     end
 end
 FixedTileRange(r::Range1, n::Integer; kwargs...) = FixedTileRange(r, n, n; kwargs...)
 
+_eltype(::Type{R}) where R<:OrdinalRange = StepRange{eltype(R), eltype(R)}
 _eltype(::Type{R}) where R<:AbstractUnitRange = UnitRange{eltype(R)}
 _eltype(::Type{R}) where R<:AbstractVector = R # this includes CartesianIndices{1}
 
 _int(x::Integer) = x
 _int(x::CartesianIndex{1}) = first(x.I)
 
-function _fixedtile_length(start::T, stop::T, n, Δ, keep_last) where T<:Integer
+function _fixedtile_length(r::OrdinalRange{T}, n, Δ, keep_last) where T<:Integer
     _round = keep_last ? ceil : floor
-    return _round(T, (stop - n - start + 1)/_int(Δ)) + 1
+    start, step, stop = first(r), Base.step(r), last(r)
+    return _round(T, (stop - step*n - start + 1)/_int(Δ)) + 1
 end
-_fixedtile_length(start::T, stop::T, n, Δ, keep_last) where T<:CartesianIndex{1} =
-    _fixedtile_length(_int(start), _int(stop), n, Δ, keep_last)
-
-"Get the length of the tile. The last tile might has few elements than this."
-tilelength(r::FixedTileRange{<:CartesianIndices{1}}) = CartesianIndex{1}(r.n)
-tilelength(r::FixedTileRange) = r.n
-
-"Get the stride between adjacent tiles."
-tilestride(r::FixedTileRange{<:CartesianIndices{1}}) = CartesianIndex{1}(r.Δ)
-tilestride(r::FixedTileRange) = r.Δ
+function _fixedtile_length(r::CartesianIndices{1}, n, Δ, keep_last)
+    _fixedtile_length(r.indices[1], n, Δ, keep_last)
+end
+function _fixedtile_length(r::AbstractVector{T}, n, Δ, keep_last) where T<:Integer
+    _fixedtile_length(UnitRange{T}(first(r), last(r)), n, Δ, keep_last)
+end
 
 Base.size(r::FixedTileRange) = (r.length, )
 Base.length(r::FixedTileRange) = r.length
 
 Base.@propagate_inbounds function Base.getindex(r::FixedTileRange{R, T}, i::Int) where {R, T}
+    convert(R, _getindex(r.parent, r.n, r.Δ, i))
+end
+Base.@propagate_inbounds function Base.getindex(r::FixedTileRange{R, T}, i::Int) where {R<:CartesianIndices, T}
+    # inter-operation between CartesianIndex and Integer is not very well defined
+    # for this reason, we deconstruct CartesianIndex into range, index, and reconstruct it.
+    R((_getindex(r.parent.indices[1], r.n, r.Δ, i), ))
+end
+
+Base.@propagate_inbounds function _getindex(r::R, n::T, Δ::T, i::Int) where {R, T}
     @boundscheck checkbounds(r, i)
-    start = first(r.parent) + (i-1)*tilestride(r)
-    stop = min(start+tilelength(r)-_oneunit(eltype(R)), last(r.parent))
-    return convert(R, start:stop)
+    start = first(r) + (i-1)*Δ
+    stop = start + n - _oneunit(eltype(R))
+    return start:min(stop, last(r))
+end
+Base.@propagate_inbounds function _getindex(r::R, n::T, Δ::T, i::Int) where {R<:StepRange, T}
+    @boundscheck checkbounds(r, i)
+    start = first(r) + (i-1)*Δ
+    stop = start + step(r)*n - _oneunit(eltype(R))
+    return start:step(r):min(stop, last(r))
 end
 
 
@@ -159,6 +179,12 @@ julia> TileIndices((1:4, 0:5), FixedTile((3, 4), (2, 3)))
 julia> TileIndices((1:4, 0:5), FixedTile((3, 4), (2, 3); keep_last=false))
 1×1 TileIndices{Tuple{UnitRange{Int64},UnitRange{Int64}},2,FixedTileRange{UnitRange{Int64},Int64,UnitRange{Int64}}}:
  (1:3, 0:3)
+
+julia> TileIndices((1:2:10, 0:1:5), FixedTile((3, 4), (2, 3)))
+3×2 TileIndices{Tuple{StepRange{Int64,Int64},StepRange{Int64,Int64}},2,FixedTileRange{StepRange{Int64,Int64},Int64,StepRange{Int64,Int64}}}:
+ (1:2:5, 0:1:3)  (1:2:5, 3:1:5)
+ (3:2:7, 0:1:3)  (3:2:7, 3:1:5)
+ (5:2:9, 0:1:3)  (5:2:9, 3:1:5)
 ```
 
 When `sz` and `Δ` are scalars, it affects each dimension equivalently.
@@ -185,8 +211,7 @@ FixedTile(sz::T, Δ=sz; keep_last=true) where T = FixedTile{length(sz), T}(sz, �
 
 (S::FixedTile{0})(r::Range1) = FixedTileRange(r, S.size, S.Δ; keep_last=S.keep_last)
 (S::FixedTile{0})(r::CartesianIndices{1}) = FixedTileRange(r, S.size, S.Δ; keep_last=S.keep_last)
-(S::FixedTile{0})(indices) = 
-    map(r->FixedTileRange(r, S.size, S.Δ; keep_last=S.keep_last), indices)
+(S::FixedTile{0})(indices) = map(r->FixedTileRange(r, S.size, S.Δ; keep_last=S.keep_last), indices)
 
 (S::FixedTile{N})(indices) where N =
     map((args...)->FixedTileRange(args...; keep_last=S.keep_last), indices, S.size, S.Δ)
