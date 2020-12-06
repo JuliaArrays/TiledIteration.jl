@@ -13,6 +13,7 @@ end
 
 export TileIterator, FixedTileRange, FixedTile, TileIndices, EdgeIterator, padded_tilesize, TileBuffer, RelaxStride, RelaxLastTile
 
+include("compat.jl")
 include("tileiterator.jl")
 include("tilerange.jl")
 include("tileindices.jl")

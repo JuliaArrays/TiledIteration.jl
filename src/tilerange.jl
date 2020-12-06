@@ -128,7 +128,7 @@ Base.length(r::FixedTileRange) = r.length
 Base.@propagate_inbounds function Base.getindex(r::FixedTileRange{R, T}, i::Int) where {R, T}
     @boundscheck checkbounds(r, i)
     start = first(r.parent) + (i-1)*tilestride(r)
-    stop = min(start+tilelength(r)-oneunit(eltype(R)), last(r.parent))
+    stop = min(start+tilelength(r)-_oneunit(eltype(R)), last(r.parent))
     return convert(R, start:stop)
 end
 

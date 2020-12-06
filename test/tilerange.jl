@@ -1,4 +1,12 @@
 @testset "Fixed Tile" begin
+    ranges = [
+        2:10,
+        UInt8(2):UInt8(10),
+        OffsetArrays.IdentityUnitRange(2:10), # Julia 1.0 compat: Base.IdentityUnitRange was Base.Slice
+        OffsetArrays.IdOffsetRange(2:10),
+        OffsetArrays.IdOffsetRange(Base.OneTo(9), 1)
+    ]
+
     @testset "FixedTileRange" begin
         function test_iteration(r)
             for (i, v) in enumerate(r)
@@ -14,13 +22,7 @@
         end
 
         @testset "ranges" begin
-            for r0 in [
-                2:10,
-                UInt8(2):UInt8(10),
-                Base.IdentityUnitRange(2:10),
-                OffsetArrays.IdOffsetRange(2:10),
-                OffsetArrays.IdOffsetRange(Base.OneTo(9), 1)
-            ]
+            for r0 in ranges
                 # keep the last tile
                 r = @inferred FixedTileRange(r0, 4)
                 @test r == FixedTileRange(r0, 4; keep_last=true) == FixedTileRange(r0, 4, 4)
@@ -150,14 +152,6 @@
 
 
     @testset "FixedTile" begin
-        ranges = [
-            2:10,
-            UInt8(2):UInt8(10),
-            Base.IdentityUnitRange(2:10),
-            OffsetArrays.IdOffsetRange(2:10),
-            OffsetArrays.IdOffsetRange(Base.OneTo(9), 1)
-        ]
-
         # scalar case
         s = FixedTile(4, 2)
         @test s == FixedTile(4, 2; keep_last=true)
