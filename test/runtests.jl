@@ -3,7 +3,7 @@ using Test
 using Documenter
 using OffsetArrays: IdentityUnitRange
 
-if VERSION < v"1.6-"
+if v"1.1" <= VERSION < v"1.6-"
     Documenter.doctest(TiledIteration)
     # Version restriction can be lifted, when
     # filters can be passed to `doctest`
@@ -17,6 +17,9 @@ if VERSION < v"1.6-"
     # Documenter.doctest(TiledIteration, doctestfilters = doctestfilters)
 end
 
+include("compat.jl")
+include("tilerange.jl")
+include("tileindices.jl")
 
 @testset "TileIterator small examples" begin
     titr = @inferred TileIterator((1:10,), RelaxLastTile((3,)))
