@@ -10,6 +10,8 @@ arrays. A "tile" corresponds to a chunk of a larger array, typically a
 region that is large enough to encompass any "local" computations you
 need to perform; some of these computations may require temporary storage.
 
+A related package with different aims is [TiledViews.jl](https://github.com/bionanoimaging/TiledViews.jl).
+
 ## Usage
 
 This package offers two basic kinds of functionality: the management
