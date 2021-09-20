@@ -1,4 +1,4 @@
-using TiledIteration, OffsetArrays
+using TiledIteration, OffsetArrays, LoopVectorization
 using Test
 using Documenter
 using OffsetArrays: IdentityUnitRange
@@ -242,7 +242,6 @@ getoob(v) = @inbounds v[24]
     v[2,97] = 1
     @test a[1] == 1
     p = pointer(v)
-    @test parent(v) === v.buf
     v = @inferred(TileBuffer(v, (-1:1, 1:1)))
     @test pointer(v) == p
     @test axes(v) == (-1:1, 1:1)
@@ -276,6 +275,19 @@ getoob(v) = @inbounds v[24]
     @inbounds begin
         b[17,2] = 5.2
         @test b[17,2] == 5.2
+    end
+
+    @static if Base.VERSION >= v"1.5"
+        a = reshape(Float32.(1:25), (5, 5))
+        tb = TileBuffer(a, (2:4, 2:5))
+        function sum_with_lv(A)
+            s = zero(eltype(A))
+            @turbo for i in eachindex(A)
+                s += A[i]
+            end
+            return s
+        end
+        @test sum_with_lv(a[1:12]) == sum_with_lv(tb) == sum(tb) == 78
     end
 end
 
