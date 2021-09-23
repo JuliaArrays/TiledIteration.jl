@@ -3,20 +3,12 @@ using Test
 using Documenter
 using OffsetArrays: IdentityUnitRange
 
-if VERSION < v"1.6-"
-    Documenter.doctest(TiledIteration)
-    # Version restriction can be lifted, when
-    # filters can be passed to `doctest`
-    # See https://github.com/JuliaDocs/Documenter.jl/pull/1435
-    #
-    # doctestfilters = [
-    #     r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
-    #     r"(Array{[a-zA-Z0-9]+,\s?1}|Vector{[a-zA-Z0-9]+})",
-    #     r"(Array{[a-zA-Z0-9]+,\s?2}|Matrix{[a-zA-Z0-9]+})",
-    # ]
-    # Documenter.doctest(TiledIteration, doctestfilters = doctestfilters)
-end
-
+doctestfilters = [
+    r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
+    r"(Array{[a-zA-Z0-9{}\s,]+,\s?1}|Vector{[a-zA-Z0-9{}\s,]+})",
+    r"(Array{[a-zA-Z0-9{}\s,]+,\s?2}|Matrix{[a-zA-Z0-9{}\s,]+})",
+]
+Documenter.doctest(TiledIteration, doctestfilters = doctestfilters)
 
 @testset "TileIterator small examples" begin
     titr = @inferred TileIterator((1:10,), RelaxLastTile((3,)))
