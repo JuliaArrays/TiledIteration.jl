@@ -11,7 +11,7 @@ else
     _inc(state, iter) = inc(state, iter.indices)
 end
 
-export TileIterator, EdgeIterator, padded_tilesize, TileBuffer, RelaxStride, RelaxLastTile
+export TileIterator, EdgeIterator, SplitAxis, SplitAxes, padded_tilesize, TileBuffer, RelaxStride, RelaxLastTile
 
 include("tileiterator.jl")
 
@@ -70,6 +70,83 @@ end
 end
 
 Base.show(io::IO, iter::EdgeIterator) = print(io, "EdgeIterator(", iter.outer.indices, ", ", iter.inner.indices, ')')
+
+### SplitAxis and SplitAxes
+
+struct SplitAxis <: AbstractVector{UnitRange{Int}}
+    splits::Vector{Int}
+end
+
+"""
+    SplitAxis(ax::AbstractUnitRange, n::Real)
+
+Split `ax` into `ceil(Int, n)` approximately equal-sized chunks. The first chunk is no larger than any other chunk,
+and any fractional "deficit" in `n` will further shrink the first chunk.
+
+This can be useful in splitting work across threads. When the first thread is responsible for assigning work to the others,
+it's often useful to assign less work to it to account for the time spent scheduling.
+
+# Examples
+
+```jldoctest; setup=:(using TiledIteration)
+julia> collect(SplitAxis(1:16, 4))
+4-element Vector{UnitRange{$Int}}:
+ 1:4
+ 5:8
+ 9:12
+ 13:16
+
+julia> collect(SplitAxis(1:16, 3.5))
+4-element Vector{UnitRange{$Int}}:
+ 1:1
+ 2:6
+ 7:11
+ 12:16
+```
+
+In the latter case all the ranges except the first have length 5; consequently, only one element remains for the first chunk.
+"""
+function SplitAxis(ax::AbstractUnitRange{<:Integer}, n::Real)
+    step = ceil(Int, length(ax)/n)
+    # Give the smallest amount of work to thread 1, since often it is also scheduling the work for all
+    # the other threads.
+    SplitAxis(max.(first(ax)-1, collect(reverse(range(last(ax), step=-step, length=ceil(Int, n)+1)))))
+end
+
+Base.@propagate_inbounds Base.getindex(sax::SplitAxis, i::Int) = sax.splits[i]+1:sax.splits[i+1]
+
+Base.size(sax::SplitAxis) = (length(sax.splits)-1,)
+
+struct SplitAxes{N} <: AbstractVector{Tuple{UnitRange{Int},Vararg{UnitRange{Int},N}}}
+    inner::NTuple{N,UnitRange{Int}}
+    splitax::SplitAxis
+end
+
+"""
+    SplitAxes(axs::NTuple{N,AbstractUnitRange}, n::Real)
+
+Split `axs` into `ceil(Int, n)` approximately equal-sized chunks along the final dimension represented by `axs`.
+
+See [`SplitAxis`](@ref) for further details.
+
+# Examples
+
+```jldoctest; setup=:(using TiledIteration)
+julia> A = rand(3, 16);
+
+julia> collect(SplitAxes(axes(A), 4))
+4-element Vector{Tuple{UnitRange{$Int}, UnitRange{$Int}}}:
+ (1:3, 1:4)
+ (1:3, 5:8)
+ (1:3, 9:12)
+ (1:3, 13:16)
+```
+"""
+SplitAxes(axs::Tuple{AbstractUnitRange,Vararg{AbstractUnitRange}}, n::Real) = SplitAxes{length(axs)-1}(Base.front(axs), SplitAxis(axs[end], n))
+
+Base.@propagate_inbounds Base.getindex(saxs::SplitAxes, i::Int) = (saxs.inner..., saxs.splitax[i])
+
+Base.size(saxs::SplitAxes) = size(saxs.splitax)
 
 ### Calculating the size of tiles ###
 

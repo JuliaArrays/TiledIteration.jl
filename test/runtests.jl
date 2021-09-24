@@ -3,20 +3,12 @@ using Test
 using Documenter
 using OffsetArrays: IdentityUnitRange
 
-if VERSION < v"1.6-"
-    Documenter.doctest(TiledIteration)
-    # Version restriction can be lifted, when
-    # filters can be passed to `doctest`
-    # See https://github.com/JuliaDocs/Documenter.jl/pull/1435
-    #
-    # doctestfilters = [
-    #     r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
-    #     r"(Array{[a-zA-Z0-9]+,\s?1}|Vector{[a-zA-Z0-9]+})",
-    #     r"(Array{[a-zA-Z0-9]+,\s?2}|Matrix{[a-zA-Z0-9]+})",
-    # ]
-    # Documenter.doctest(TiledIteration, doctestfilters = doctestfilters)
-end
-
+doctestfilters = [
+    r"{([a-zA-Z0-9]+,\s?)+[a-zA-Z0-9]+}",
+    r"(Array{[a-zA-Z0-9{}\s,]+,\s?1}|Vector{[a-zA-Z0-9{}\s,]+})",
+    r"(Array{[a-zA-Z0-9{}\s,]+,\s?2}|Matrix{[a-zA-Z0-9{}\s,]+})",
+]
+Documenter.doctest(TiledIteration, doctestfilters = doctestfilters)
 
 @testset "TileIterator small examples" begin
     titr = @inferred TileIterator((1:10,), RelaxLastTile((3,)))
@@ -285,6 +277,62 @@ getoob(v) = @inbounds v[24]
         b[17,2] = 5.2
         @test b[17,2] == 5.2
     end
+end
+
+@testset "SplitAxis" begin
+    function meets_criteria(ax::AbstractUnitRange, splits::AbstractVector)
+        @test issorted(splits)
+        @test first(splits) + 1 == first(ax)  # the +1 comes from splits[i]+1:splits[i+1]
+        @test last(splits) == last(ax)
+        @test firstindex(splits) == 1
+        d1 = splits[2] - splits[1]
+        for i = 2:length(splits)-1
+            @test splits[i+1] - splits[i] >= d1
+        end
+        return
+    end
+    function meets_criteria(sax, ax, n::Real)
+        meets_criteria(ax, sax.splits)
+        @test sax[1] isa UnitRange{Int} && first(sax[1]) == first(ax)
+        @test reduce(vcat, [sax[i] for i = 1:ceil(Int, n)]) == collect(ax) # collect is in case `ax` is indexed by something other than 1:k
+        @test collect(sax) == [sax[i] for i = 1:ceil(Int, n)]
+    end
+    function meets_criteria(ax::AbstractUnitRange, n::Real)
+        meets_criteria(SplitAxis(ax, n), ax, n)
+    end
+
+    meets_criteria(1:8, 3)
+    meets_criteria(Base.OneTo(8), 3)
+    meets_criteria(2:8, 3)
+    meets_criteria(3:8, 3)
+    meets_criteria(1:9, 3)
+    meets_criteria(1:8, 2.5)
+    meets_criteria(Base.OneTo(8), 2.5)
+    meets_criteria(2:8, 2.5)
+    meets_criteria(3:8, 2.5)
+    meets_criteria(1:9, 2.5)
+
+    function meets_criteria(axs::Base.Indices, n::Real)
+        saxs = SplitAxes(axs, n)
+        meets_criteria(saxs.splitax, axs[end], n)
+        function check_and_getlast(chunk)
+            @test chunk[1:end-1] == axs[1:end-1]
+            return chunk[end]
+        end
+        @test reduce(vcat, [check_and_getlast(saxs[i]) for i = 1:ceil(Int, n)]) == collect(axs[end])
+        @test collect(saxs) == [saxs[i] for i = 1:ceil(Int, n)]
+    end
+
+    meets_criteria((1:5, 1:8), 3)
+    meets_criteria((Base.OneTo(5), Base.OneTo(8)), 3)
+    meets_criteria((1:5, 2:8), 3)
+    meets_criteria((1:5, 3:8), 3)
+    meets_criteria((1:5, 1:9), 3)
+    meets_criteria((1:5, 1:8), 2.5)
+    meets_criteria((Base.OneTo(5), Base.OneTo(8)), 2.5)
+    meets_criteria((1:5, 2:8), 2.5)
+    meets_criteria((1:5, 3:8), 2.5)
+    meets_criteria((1:5, 1:9), 2.5)
 end
 
 nothing
