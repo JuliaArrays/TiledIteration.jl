@@ -18,7 +18,48 @@ disjoint tiles of a larger array.
 
 ### Iteration
 
-To iterate over disjoint tiles of a larger array, use a `TileIterator`:
+#### SplitAxis and SplitAxes
+
+The main use for these simple types is in distributing work across
+threads, usually in circumstances that do not require
+multidimensional locality as provided by `TileIterator`.  `SplitAxis`
+splits a single array axis, and `SplitAxes` splits multidimensional
+axes along the final axis.  For example:
+
+```julia
+julia> using TiledIteration
+
+julia> A = rand(3, 20);
+
+julia> collect(SplitAxes(axes(A), 4))
+4-element Vector{Tuple{UnitRange{Int64}, UnitRange{Int64}}}:
+ (1:3, 1:5)
+ (1:3, 6:10)
+ (1:3, 11:15)
+ (1:3, 16:20)
+```
+
+You can also reduce the amount of work assigned to thread 1 (often the
+main thread is responsible for scheduling the other threads):
+
+```julia
+julia> collect(SplitAxes(axes(A), 3.5))
+4-element Vector{Tuple{UnitRange{Int64}, UnitRange{Int64}}}:
+ (1:3, 1:2)
+ (1:3, 3:8)
+ (1:3, 9:14)
+ (1:3, 15:20)
+```
+
+Using "3.5 chunks" forces the later workers to perform 6 columns of
+work (rounding 20/3.5 up to the next integer), leaving only two
+columns remaining for the first thread.
+
+
+#### TileIterator
+
+More general iteration over disjoint tiles of a larger array can be done
+with `TileIterator`:
 
 ```julia
 using TiledIteration
