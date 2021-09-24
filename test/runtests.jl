@@ -241,6 +241,9 @@ getoob(v) = @inbounds v[24]
     @test axes(v) == (2:3, 97:99)
     v[2,97] = 1
     @test a[1] == 1
+    @test strides(v) == (1, 2)
+    @test @inferred(TiledIteration.viewtype(typeof(v))) === typeof(v.view)
+    @test @inferred(TiledIteration.buftype(typeof(v))) === typeof(v.buf)
     p = pointer(v)
     v = @inferred(TileBuffer(v, (-1:1, 1:1)))
     @test pointer(v) == p
