@@ -3,6 +3,7 @@ module TiledIteration
 using OffsetArrays
 using Base: tail, Indices, @propagate_inbounds
 using Base.IteratorsMD: inc
+using ArrayInterface
 
 if VERSION < v"1.6.0-DEV.1174"
     _inc(state, iter) = inc(state, first(iter).I, last(iter).I)
@@ -196,10 +197,13 @@ end
 
 ### Tile shaping and coordinate transformation
 
-struct TileBuffer{T,N,P} <: AbstractArray{T,N}
+struct TileBuffer{T,N,P} <: DenseArray{T,N}
     view::OffsetArray{T,N,Array{T,N}}  # the currently-active view
     buf::Array{T,P}                    # the original backing buffer
 end
+viewtype(::Type{TileBuffer{T,N,P}}) where {T,N,P} = OffsetArray{T,N,Array{T,N}}
+buftype(::Type{TileBuffer{T,N,P}}) where {T,N,P} = Array{T,P}
+parent_type(::Type{OffsetArray{T,N,Array{T,N}}}) where {T,N} = Array{T,N}
 
 """
     TileBuffer(a, inds::Indices) -> v
@@ -244,8 +248,13 @@ Base.size(tb::TileBuffer) = size(tb.view)
 
 @inline @propagate_inbounds Base.setindex!(tb::TileBuffer{T,N}, val, I::Vararg{Int,N}) where {T,N} = tb.view[I...] = val
 
-Base.pointer(tb::TileBuffer) = pointer(parent(tb.view))
+Base.pointer(tb::TileBuffer) = pointer(tb.view)
+Base.strides(tb::TileBuffer) = strides(tb.view)
+Base.parent(tb::TileBuffer) = tb.view
 
-Base.parent(tb::TileBuffer) = tb.buf
+ArrayInterface.stride_rank(::Type{TB}) where TB<:TileBuffer = ArrayInterface.stride_rank(parent_type(viewtype(TB)))
+ArrayInterface.contiguous_axis(::Type{TB}) where TB<:TileBuffer = ArrayInterface.contiguous_axis(parent_type(viewtype(TB)))
+ArrayInterface.dense_dims(tb::TileBuffer) = ArrayInterface.dense_dims(parent(tb))
+ArrayInterface.offsets(tb::TileBuffer) = ArrayInterface.offsets(parent(tb))
 
 end # module
