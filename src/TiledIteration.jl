@@ -32,7 +32,7 @@ end
 EdgeIterator(outer::CartesianIndices{N,UR1}, inner::CartesianIndices{N,UR2}) where {N,UR1,UR2} =
     EdgeIterator{N,UR1,UR2}(outer, inner)
 EdgeIterator(outer::Indices{N}, inner::Indices{N}) where N =
-    EdgeIterator(promote(CartesianIndices(outer), CartesianIndices(inner))...)
+    EdgeIterator(CartesianIndices(outer), CartesianIndices(inner))
 
 """
     EdgeIterator(outer, inner)
@@ -52,7 +52,7 @@ function Base.iterate(iter::EdgeIterator)
     iterouter = iterate(iter.outer)
     iterouter === nothing && return nothing
     item = nextedgeitem(iter, iterouter[2])
-    item ∉ iter.outer && return nothing
+    item.I[end] > last(iter.outer.indices[end]) && return nothing
     return item, item
 end
 function Base.iterate(iter::EdgeIterator, state)
@@ -64,10 +64,11 @@ function Base.iterate(iter::EdgeIterator, state)
 end
 
 @inline function nextedgeitem(iter::EdgeIterator, I::CartesianIndex)
-    !(I ∈ iter.inner) && return I
-    state = (last(iter.inner)[1], tail(I.I)...)
-    newI = CartesianIndex(_inc(state, iter.outer))
-    nextedgeitem(iter, newI)
+    while I.I[1] == first(iter.inner)[1] && I ∈ iter.inner
+        state = (last(iter.inner)[1], tail(I.I)...)
+        I = CartesianIndex(_inc(state, iter.outer))
+    end
+    return I
 end
 
 Base.show(io::IO, iter::EdgeIterator) = print(io, "EdgeIterator(", iter.outer.indices, ", ", iter.inner.indices, ')')
