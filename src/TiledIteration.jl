@@ -32,7 +32,7 @@ end
 EdgeIterator(outer::CartesianIndices{N,UR1}, inner::CartesianIndices{N,UR2}) where {N,UR1,UR2} =
     EdgeIterator{N,UR1,UR2}(outer, inner)
 EdgeIterator(outer::Indices{N}, inner::Indices{N}) where N =
-    EdgeIterator(promote(CartesianIndices(outer), CartesianIndices(inner))...)
+    EdgeIterator(CartesianIndices(outer), CartesianIndices(inner))
 
 """
     EdgeIterator(outer, inner)
@@ -52,7 +52,7 @@ function Base.iterate(iter::EdgeIterator)
     iterouter = iterate(iter.outer)
     iterouter === nothing && return nothing
     item = nextedgeitem(iter, iterouter[2])
-    item ∉ iter.outer && return nothing
+    item.I[end] > last(iter.outer.indices[end]) && return nothing
     return item, item
 end
 function Base.iterate(iter::EdgeIterator, state)
@@ -63,11 +63,28 @@ function Base.iterate(iter::EdgeIterator, state)
     return item, item
 end
 
-@inline function nextedgeitem(iter::EdgeIterator, I::CartesianIndex)
-    !(I ∈ iter.inner) && return I
-    state = (last(iter.inner)[1], tail(I.I)...)
-    newI = CartesianIndex(_inc(state, iter.outer))
-    nextedgeitem(iter, newI)
+"""
+    nextedgeitem(iter::EdgeIterator{N}, I::CartesianIndex{N})
+
+Find the next index in `outer` that is not in `inner` if `I` is not an edge site.
+"""
+@inline function nextedgeitem(iter::EdgeIterator{N}, I::CartesianIndex{N}) where {N}
+    # An index I = (I1, I2, ..., IN) ∈ outer is an edge site if
+    #   * I1 < first(inner1)
+    #   * I1 ∈ inner1  and  any of (I2, ..., IN) ∉ inner.indices[2:N]
+    #   * I1 > last(inner1)
+    # where inner1 = inner.indices[1]
+    #
+    # With that in mind we can iterate until I1 equals first(inner1). Once we
+    # reach first(inner1), we check whether the higher dimensions are also in inner.
+    # If all of (I2, ..., IN) are in inner, then we can skip iterating I1 ∈ inner1
+    # and jump ahead to I1 = last(inner1). On the other hand if any of (I2, ..., IN)
+    # are not in inner we keep iterating over I1 ∈ inner1.
+    while I.I[1] == first(iter.inner)[1] && all(map(in, tail(I.I), tail(iter.inner.indices)))
+        state = (last(iter.inner)[1], tail(I.I)...)
+        I = CartesianIndex(_inc(state, iter.outer))
+    end
+    return I
 end
 
 Base.show(io::IO, iter::EdgeIterator) = print(io, "EdgeIterator(", iter.outer.indices, ", ", iter.inner.indices, ')')
