@@ -1,7 +1,7 @@
 name = "TiledIteration"
 uuid = "06e1c1a7-607b-532d-9fad-de7d9aa2abac"
 author = ["Tim Holy <tim.holy@gmail.com>"]
-version = "0.4.1"
+version = "0.3.2"
 
 [deps]
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
