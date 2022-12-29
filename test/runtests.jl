@@ -174,6 +174,14 @@ end
     for it in iter
         @test it ∈ iter.outer
     end
+
+    # empty inner
+    iter = EdgeIterator((1:4,), (3:2,))
+    @test collect(iter) == [CartesianIndex(1),
+                            CartesianIndex(2),
+                            CartesianIndex(3),
+                            CartesianIndex(4),
+                            ]
 end
 
 @testset "padded sizes" begin
