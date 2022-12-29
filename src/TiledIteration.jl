@@ -80,7 +80,7 @@ Find the next index in `outer` that is not in `inner` if `I` is not an edge site
     # If all of (I2, ..., IN) are in inner, then we can skip iterating I1 ∈ inner1
     # and jump ahead to I1 = last(inner1). On the other hand if any of (I2, ..., IN)
     # are not in inner we keep iterating over I1 ∈ inner1.
-    while I.I[1] == first(iter.inner)[1] && all(map(in, tail(I.I), tail(iter.inner.indices)))
+    while I.I[1] ∈ iter.inner.indices[1] && all(map(in, tail(I.I), tail(iter.inner.indices)))
         state = (last(iter.inner)[1], tail(I.I)...)
         I = CartesianIndex(_inc(state, iter.outer))
     end
