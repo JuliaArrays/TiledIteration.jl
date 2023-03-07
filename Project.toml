@@ -1,7 +1,7 @@
 name = "TiledIteration"
 uuid = "06e1c1a7-607b-532d-9fad-de7d9aa2abac"
 author = ["Tim Holy <tim.holy@gmail.com>"]
-version = "0.4.2"
+version = "0.5"
 
 [deps]
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
