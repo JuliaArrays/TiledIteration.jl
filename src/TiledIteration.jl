@@ -3,7 +3,7 @@ module TiledIteration
 using OffsetArrays
 using Base: tail, Indices, @propagate_inbounds
 using Base.IteratorsMD: inc
-using ArrayInterface
+using StaticArrayInterface
 
 if VERSION < v"1.6.0-DEV.1174"
     _inc(state, iter) = inc(state, first(iter).I, last(iter).I)
@@ -269,9 +269,9 @@ Base.pointer(tb::TileBuffer) = pointer(tb.view)
 Base.strides(tb::TileBuffer) = strides(tb.view)
 Base.parent(tb::TileBuffer) = tb.view
 
-ArrayInterface.stride_rank(::Type{TB}) where TB<:TileBuffer = ArrayInterface.stride_rank(parent_type(viewtype(TB)))
-ArrayInterface.contiguous_axis(::Type{TB}) where TB<:TileBuffer = ArrayInterface.contiguous_axis(parent_type(viewtype(TB)))
-ArrayInterface.dense_dims(tb::TileBuffer) = ArrayInterface.dense_dims(parent(tb))
-ArrayInterface.offsets(tb::TileBuffer) = ArrayInterface.offsets(parent(tb))
+StaticArrayInterface.stride_rank(::Type{TB}) where TB<:TileBuffer = StaticArrayInterface.stride_rank(parent_type(viewtype(TB)))
+StaticArrayInterface.contiguous_axis(::Type{TB}) where TB<:TileBuffer = StaticArrayInterface.contiguous_axis(parent_type(viewtype(TB)))
+StaticArrayInterface.dense_dims(tb::TileBuffer) = StaticArrayInterface.dense_dims(parent(tb))
+StaticArrayInterface.offsets(tb::TileBuffer) = StaticArrayInterface.offsets(parent(tb))
 
 end # module
