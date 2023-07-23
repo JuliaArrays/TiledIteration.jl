@@ -1,7 +1,6 @@
 # TiledIteration
 
-[![Build Status](https://travis-ci.org/JuliaArrays/TiledIteration.jl.svg?branch=master)](https://travis-ci.org/JuliaArrays/TiledIteration.jl)
-
+[![CI](https://github.com/JuliaArrays/TiledIteration.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/JuliaArrays/TiledIteration.jl/actions/workflows/CI.yml)
 [![codecov.io](http://codecov.io/github/JuliaArrays/TiledIteration.jl/coverage.svg?branch=master)](http://codecov.io/github/JuliaArrays/TiledIteration.jl?branch=master)
 
 This Julia package handles some of the low-level details for writing
